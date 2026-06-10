@@ -18,4 +18,14 @@ official_reproduction/**/.cache/
 *.part
 *.more
 
+# LaTeX build intermediates.
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
 # Keep generated project deliverables, figures, logs, and compact videos tracked.

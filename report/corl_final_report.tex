@@ -1,15 +1,16 @@
-\documentclass[10pt,twocolumn]{article}
+\documentclass{article}
 
-\usepackage[margin=0.75in]{geometry}
-\usepackage{times}
+\usepackage{amssymb}
+\usepackage[final]{corl_2025}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{hyperref}
 \usepackage{amsmath}
 
 \title{Plug-and-Play DDIM Sampler Improvement for Official Diffusion Policy Push-T}
-\author{Final Project Report}
-\date{}
+\author{
+  Final Project Report\\
+  Robotics Final Project\\
+}
 
 \begin{document}
 \maketitle
@@ -18,15 +19,17 @@
 This project reproduces the official low-dimensional Push-T checkpoint from Diffusion Policy and implements a direct inference-time improvement: replacing the official DDPM ancestral sampler with a DDIM deterministic sampler. The official checkpoint is evaluated with matched Push-T seeds under fixed $(k,h)$ settings, where $k$ is the number of denoising steps and $h$ is the number of executed control steps before replanning. DDIM dramatically improves low/mid-denoising official settings: at $(25,2)$, score improves from 0.155 to 0.900; at $(50,4)$, score improves from 0.653 to 0.929. The claim is carefully bounded: DDIM does not dominate the strongest tested DDPM high-denoising baseline $(100,8)$, which remains at score 0.949.
 \end{abstract}
 
+\keywords{Diffusion Policy, Push-T, DDIM, sampler replacement, robot learning}
+
 \section{Introduction}
 
-Diffusion Policy~\cite{chi2023diffusion} generates action chunks through iterative denoising and deploys them in a receding-horizon control loop. Its inference behavior depends on the sampler and the deployment parameters: denoising steps $k$ and executed action horizon $h$. The original official Push-T checkpoint uses a DDPM scheduler. A natural improvement idea is to swap the sampler at inference time, without retraining, using DDIM~\cite{song2021ddim}.
+Diffusion Policy~\citep{chi2023diffusion} generates action chunks through iterative denoising and deploys them in a receding-horizon control loop. Its inference behavior depends on the sampler and the deployment parameters: denoising steps $k$ and executed action horizon $h$. The original official Push-T checkpoint uses a DDPM scheduler. A natural improvement idea is to swap the sampler at inference time, without retraining, using DDIM~\citep{song2021ddim}.
 
 This is not claimed as a new diffusion-model algorithm. The contribution is an official-checkpoint validation of a plug-and-play sampler replacement on Push-T.
 
 \section{Related Work and Claim Boundary}
 
-Diffusion Policy introduced action diffusion for visuomotor policy learning~\cite{chi2023diffusion}. DDIM introduced deterministic non-Markovian diffusion sampling~\cite{song2021ddim}. Recent robotics work such as VADF, RA-DP, TIDAL, RTI-DP, and adaptive diffusion replanning already studies adaptive scheduling, replanning, and inference-time compute allocation~\cite{vadf2026,radp2025,tidal2026,rtidp2025,replanning2023}.
+Diffusion Policy introduced action diffusion for visuomotor policy learning~\citep{chi2023diffusion}. DDIM introduced deterministic non-Markovian diffusion sampling~\citep{song2021ddim}. Recent robotics work such as VADF, RA-DP, TIDAL, RTI-DP, and adaptive diffusion replanning already studies adaptive scheduling, replanning, and inference-time compute allocation~\citep{vadf2026,radp2025,tidal2026,rtidp2025,replanning2023}.
 
 Therefore, this project does not claim a new scheduling algorithm. The supported improvement is narrower and directly tested: using DDIM instead of the official DDPM sampler for the public Diffusion Policy Push-T checkpoint.
 
@@ -47,7 +50,7 @@ The model weights, normalizer, observation history, action horizon, and environm
 
 \section{Results}
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \caption{Matched 20-seed official Push-T comparison.}
 \begin{tabular}{lrrrr}
@@ -63,7 +66,7 @@ $(100,8)$ & 0.949 & 0.900 & -0.048 & -0.050 \\
 
 Paired bootstrap 95\% confidence intervals for score deltas are $[0.593, 0.870]$ for $(25,2)$, $[0.056, 0.488]$ for $(50,4)$, and $[-0.152, 0.007]$ for $(100,8)$.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{../figures/official_sampler_comparison.png}
 \caption{Plug-and-play DDIM replacement improves low/mid-denoising official checkpoint settings but does not dominate the high-denoising DDPM baseline.}
@@ -81,7 +84,7 @@ The official reproduction uses a compatibility environment rather than the origi
 
 The final project has a defensible improvement result. Starting from an official Diffusion Policy Push-T reproduction, it implements a plug-and-play DDIM sampler replacement and validates it on official checkpoint rollouts. DDIM substantially improves low/mid-denoising settings over the official DDPM sampler on matched seeds, while the original high-denoising DDPM baseline remains strongest.
 
-\bibliographystyle{plain}
+% The CoRL style selects the bibliography style automatically.
 \bibliography{corl_references}
 
 \end{document}

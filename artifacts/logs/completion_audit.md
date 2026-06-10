@@ -24,7 +24,7 @@ The earlier rule-based dynamic scheduler is retained only as a synthetic diagnos
 | Improvement evaluated on official checkpoint | Satisfied | 20 matched official Push-T seeds in `results/official_sampler_ddim_n20.csv`, compared against DDPM logs from `official_reproduction/pusht_official_kh_grid_highB_n20`. |
 | Paired analysis | Satisfied | `scripts/analyze_official_sampler_comparison.py` writes `results/official_sampler_comparison_summary.csv`, `results/official_sampler_comparison_seed_scores.csv`, and `figures/official_sampler_comparison.png`. |
 | Claim-risk audit | Satisfied | `artifacts/logs/claim_risk_audit_zh.md` records related-work conflicts and stop-loss decisions for the earlier scheduler framing. |
-| English final report | Satisfied | `report/final_report.md` and `report/final_report.pdf` are revised to DDIM sampler improvement framing. `report/corl_final_report.tex` and `report/corl_references.bib` provide CoRL-style LaTeX source. Local LaTeX compilation is unavailable in this container. |
+| English final report | Satisfied | `report/final_report.md` and `report/final_report.pdf` are revised to DDIM sampler improvement framing. `report/corl_final_report.tex` uses the official `corl_2025` package with `report/corl_2025.sty` and `report/corlabbrvnat.bst`; `report/corl_final_report.pdf` was compiled successfully with `latexmk`. |
 | English presentation slides | Satisfied | `slides/final_presentation.pptx` and `slides/final_presentation.pdf` regenerated with DDIM sampler improvement framing. |
 
 ## Main Reproduction Result
@@ -79,4 +79,5 @@ python -m py_compile scripts/run_official_kh_grid.py scripts/analyze_official_sa
 bash -n scripts/run_official_diffusion_policy_eval.sh scripts/download_lerobot_diffusion_pusht_model.sh
 CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py --sampler ddim --output-root official_reproduction/pusht_official_sampler_ddim_n20 --csv-out results/official_sampler_ddim_n20.csv --n-test 20 --n-envs 5 --pairs 25,2 50,4 100,8
 python scripts/analyze_official_sampler_comparison.py
+cd report && latexmk -pdf -interaction=nonstopmode corl_final_report.tex
 ```
