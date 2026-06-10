@@ -1,0 +1,17 @@
+{
+  "checkpoint": "/root/FinalProject/official_reproduction/data/epoch=0550-test_mean_score=0.969.ckpt",
+  "device": "cuda:0",
+  "max_steps": 300,
+  "n_envs": 2,
+  "n_test": 4,
+  "n_train": 0,
+  "num_inference_steps": 100,
+  "runner_log": {
+    "test/mean_score": 0.9964484097146112,
+    "test/sim_max_reward_4300000": 1.0,
+    "test/sim_max_reward_4300001": 0.990086892116574,
+    "test/sim_max_reward_4300002": 1.0,
+    "test/sim_max_reward_4300003": 0.9957067467418708
+  },
+  "source": "/root/FinalProject/official_reproduction/diffusion_policy_source"
+}

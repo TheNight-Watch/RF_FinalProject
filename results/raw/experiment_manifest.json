@@ -1,0 +1,40 @@
+{
+  "task": "Push-T-style surrogate closed-loop pushing",
+  "paper_reproduced": "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion",
+  "variables": {
+    "k": "denoising steps",
+    "h": "execution horizon",
+    "budget": "k/h"
+  },
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "episode_steps": 120,
+  "methods": [
+    "aac_dvac_h_only",
+    "fixed_k16_h1",
+    "fixed_k16_h2",
+    "fixed_k16_h4",
+    "fixed_k16_h8",
+    "fixed_k2_h1",
+    "fixed_k2_h2",
+    "fixed_k2_h4",
+    "fixed_k2_h8",
+    "fixed_k4_h1",
+    "fixed_k4_h2",
+    "fixed_k4_h4",
+    "fixed_k4_h8",
+    "fixed_k8_h1",
+    "fixed_k8_h2",
+    "fixed_k8_h4",
+    "fixed_k8_h8",
+    "joint_scheduler"
+  ]
+}

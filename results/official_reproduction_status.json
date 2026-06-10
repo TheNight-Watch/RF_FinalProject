@@ -1,0 +1,89 @@
+{
+  "checkpoint_download_log": "/root/FinalProject/artifacts/logs/checkpoint_download_attempts.md",
+  "checkpoint_header_probe": {
+    "cmd": [
+      "curl",
+      "-L",
+      "--noproxy",
+      "*",
+      "-I",
+      "--max-time",
+      "45",
+      "https://diffusion-policy.cs.columbia.edu/data/experiments/low_dim/pusht/diffusion_policy_cnn/train_0/checkpoints/epoch=0550-test_mean_score=0.969.ckpt"
+    ],
+    "elapsed_sec": 2.766,
+    "output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\n  0  995M    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0\n  0  995M    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0\nHTTP/2 200 \naccept-ranges: bytes\ndate: Wed, 10 Jun 2026 09:07:37 GMT\netag: \"3e3d02c1-5f5ddcf5818a6\"\nlast-modified: Wed, 01 Mar 2023 21:58:18 GMT\nserver: Apache/2.4.25 (Debian)\ncontent-length: 1044185793\n\n",
+    "returncode": 0
+  },
+  "code_acquisition_log": "/root/FinalProject/artifacts/logs/code_acquisition_attempts.md",
+  "compatibility_notes": [
+    "Official source was acquired via GitHub codeload archive after git clone instability.",
+    "Official checkpoint was downloaded directly from diffusion-policy.cs.columbia.edu with curl resume.",
+    "The official PushT keypoints runner required local compatibility patches for Python 3.12 / gym 0.26: shared_memory=False, reset API wrapper, and concatenate argument order.",
+    "Both diffusers 0.35.2 and official-era diffusers 0.11.1 were tested; 50-seed mean scores were approximately 0.918, below the checkpoint filename score 0.969 in this container."
+  ],
+  "latest_clone_attempt": {
+    "cleaned_partial_directory": true,
+    "command": "timeout 300s git -c http.proxy= -c https.proxy= clone --depth 1 https://github.com/real-stanford/diffusion_policy.git /root/FinalProject/official_reproduction/diffusion_policy",
+    "output": "fetch-pack: unexpected disconnect while reading sideband packet",
+    "returncode": 124,
+    "timestamp_utc": "2026-06-10T09:15:22Z"
+  },
+  "local_surrogate_results": "/root/FinalProject/results/summary_results.csv",
+  "official_checkpoint": "https://diffusion-policy.cs.columbia.edu/data/experiments/low_dim/pusht/diffusion_policy_cnn/train_0/checkpoints/epoch=0550-test_mean_score=0.969.ckpt",
+  "official_checkpoint_path": "/root/FinalProject/official_reproduction/data/epoch=0550-test_mean_score=0.969.ckpt",
+  "official_checkpoint_size_bytes": 1044185793,
+  "official_eval_completed": true,
+  "official_eval_results": {
+    "pusht_eval_official_n4": {
+      "n_envs": 2,
+      "n_test": 4,
+      "num_inference_steps": 100,
+      "path": "/root/FinalProject/official_reproduction/pusht_eval_official_n4/eval_log.json",
+      "test_mean_score": 0.9964484097146112
+    },
+    "pusht_eval_official_n4_diffusers011": {
+      "n_envs": 2,
+      "n_test": 4,
+      "num_inference_steps": 100,
+      "path": "/root/FinalProject/official_reproduction/pusht_eval_official_n4_diffusers011/eval_log.json",
+      "test_mean_score": 0.9968081815172856
+    },
+    "pusht_eval_official_n50": {
+      "n_envs": 5,
+      "n_test": 50,
+      "num_inference_steps": 100,
+      "path": "/root/FinalProject/official_reproduction/pusht_eval_official_n50/eval_log.json",
+      "test_mean_score": 0.917716613377729
+    },
+    "pusht_eval_official_n50_diffusers011": {
+      "n_envs": 5,
+      "n_test": 50,
+      "num_inference_steps": 100,
+      "path": "/root/FinalProject/official_reproduction/pusht_eval_official_n50_diffusers011/eval_log.json",
+      "test_mean_score": 0.9186505414953691
+    }
+  },
+  "official_eval_script": "/root/FinalProject/scripts/run_official_diffusion_policy_eval.sh",
+  "official_eval_wrapper": "/root/FinalProject/scripts/run_official_pusht_eval.py",
+  "official_repo": "https://github.com/real-stanford/diffusion_policy.git",
+  "official_source_archive": "/root/FinalProject/official_reproduction/diffusion_policy_main.tar.gz",
+  "official_source_tree": "/root/FinalProject/official_reproduction/diffusion_policy_source",
+  "reason": null,
+  "repo_head_probe": {
+    "cmd": [
+      "git",
+      "-c",
+      "http.proxy=",
+      "-c",
+      "https.proxy=",
+      "ls-remote",
+      "https://github.com/real-stanford/diffusion_policy.git",
+      "HEAD"
+    ],
+    "elapsed_sec": 45.034,
+    "output": "",
+    "returncode": "timeout"
+  },
+  "timestamp_utc": "2026-06-10T09:06:50Z"
+}

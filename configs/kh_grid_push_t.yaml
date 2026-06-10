@@ -1,0 +1,17 @@
+task: push_t_surrogate
+description: Push-T-style closed-loop contact task for iso-compute denoising/replanning experiments.
+episode_steps: 120
+seeds: [0, 1, 2, 3, 4, 5, 6, 7]
+grid:
+  k: [2, 4, 8, 16]
+  h: [1, 2, 4, 8]
+iso_frontiers:
+  B1: [[2, 2], [4, 4], [8, 8]]
+  B2: [[2, 1], [4, 2], [8, 4], [16, 8]]
+  B4: [[4, 1], [8, 2], [16, 4]]
+baselines:
+  default_dp: {k: 8, h: 4}
+  denoising_only_h4: {h: 4, k_values: [2, 4, 8, 16]}
+  replanning_only_k8: {k: 8, h_values: [1, 2, 4, 8]}
+  aac_dvac_style: {fixed_k: 8, h_values: [1, 2, 4, 8]}
+  joint_scheduler_budget: 2

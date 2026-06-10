@@ -1,0 +1,21 @@
+.venv*/
+__pycache__/
+*.py[cod]
+
+# Large model/checkpoint artifacts are documented by logs and scripts.
+*.ckpt
+*.safetensors
+*.safetensors.tmp
+official_reproduction/**/*.tar.gz
+official_reproduction/**/*.zip
+official_reproduction/**/model_chunks/
+official_reproduction/**/.cache/
+
+# Runtime caches and temporary outputs.
+.pytest_cache/
+.mypy_cache/
+*.tmp
+*.part
+*.more
+
+# Keep generated project deliverables, figures, logs, and compact videos tracked.

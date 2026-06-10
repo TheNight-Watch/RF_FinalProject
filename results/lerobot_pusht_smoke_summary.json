@@ -1,0 +1,28 @@
+{
+  "model_dir": "/root/FinalProject/official_reproduction/hf_lerobot_diffusion_pusht",
+  "episodes": 1,
+  "max_steps": 300,
+  "seed_start": 1000,
+  "num_inference_steps": 100,
+  "mean_total_reward": 18.94651615954727,
+  "mean_max_reward": 0.6265136198534417,
+  "success_rate": 0.0,
+  "mean_steps": 300.0,
+  "mean_elapsed_s": 23.49160596076399,
+  "note": "Checkpoint was downloaded via hf-mirror after official large-file transfers timed out; safetensors structure and model loading were verified, but the assembled file SHA did not match the HF LFS metadata.",
+  "episodes_detail": [
+    {
+      "episode": 0,
+      "seed": 1000,
+      "steps": 300,
+      "total_reward": 18.94651615954727,
+      "max_reward": 0.6265136198534417,
+      "success": false,
+      "elapsed_s": 23.49160596076399,
+      "inference_steps": 100,
+      "mean_action_x": 263.1341552734375,
+      "mean_action_y": 207.50692749023438,
+      "mean_action_delta": 8.814913749694824
+    }
+  ]
+}

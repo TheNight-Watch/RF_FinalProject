@@ -1,0 +1,2 @@
+episode,seed,steps,total_reward,max_reward,success,elapsed_s,inference_steps,mean_action_x,mean_action_y,mean_action_delta
+0,1000,300,18.94651615954727,0.6265136198534417,False,23.49160596076399,100,263.1341552734375,207.50692749023438,8.814913749694824

@@ -1,0 +1,20 @@
+name: joint_iso_compute_rule_scheduler
+budget: 2
+candidates:
+  - {k: 2, h: 1}
+  - {k: 4, h: 2}
+  - {k: 8, h: 4}
+  - {k: 16, h: 8}
+rules:
+  high_risk_contact:
+    condition: contact or pusher_object_distance < 0.14
+    select: {k: 2, h: 1}
+  near_goal_alignment:
+    condition: object_goal_distance < 0.18
+    select: {k: 4, h: 2}
+  free_space_approach:
+    condition: pusher_object_distance > 0.18
+    select: {k: 4, h: 2}
+  stable_push:
+    condition: otherwise
+    select: {k: 2, h: 1}
