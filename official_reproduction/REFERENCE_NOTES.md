@@ -71,3 +71,31 @@ Recorded official-run outputs:
 The 50-seed scores are below the checkpoint filename score `0.969`. This should be reported as a measured
 environment-version reproduction gap rather than a download or execution failure. The controlled improvement
 experiment remains separated in `results/summary_results.csv` and uses the local Push-T-style surrogate.
+
+## Official Fixed `(k,h)` Frontier
+
+The optimized project also evaluates fixed `(k,h)` overrides with the official checkpoint through:
+
+- `scripts/run_official_kh_grid.py`
+- `results/official_kh_grid_results.csv`
+- `figures/official_kh_frontier.png`
+
+The 20-seed high-budget frontier run used:
+
+```bash
+CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
+  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
+  --output-root official_reproduction/pusht_official_kh_grid_highB_n20 \
+  --n-test 20 --n-envs 5 --pairs 12,1 25,2 50,4 100,8
+```
+
+Recorded official fixed-frontier outputs:
+
+- `(k=12, h=1)`: mean score `0.10652993045961456`, success `0.0`.
+- `(k=25, h=2)`: mean score `0.15480444475860594`, success `0.0`.
+- `(k=50, h=4)`: mean score `0.6531389287361444`, success `0.35`.
+- `(k=100, h=8)`: mean score `0.9485482200015596`, success `0.95`.
+
+This official checkpoint result is intentionally reported as a supplementary frontier rather than the main
+scheduler-improvement result. It shows that, for the pretrained official checkpoint, low denoising depth cannot
+be compensated by frequent replanning at the tested high-budget frontier.

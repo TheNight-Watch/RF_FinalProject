@@ -14,7 +14,19 @@
     4,
     5,
     6,
-    7
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
   ],
   "episode_steps": 120,
   "methods": [
@@ -35,6 +47,7 @@
     "fixed_k8_h2",
     "fixed_k8_h4",
     "fixed_k8_h8",
-    "joint_scheduler"
+    "joint_scheduler",
+    "joint_scheduler_safe"
   ]
 }

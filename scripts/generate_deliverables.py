@@ -41,6 +41,7 @@ SLIDES = ROOT / "slides"
 LOGS = ROOT / "artifacts" / "logs"
 LEROBOT_MODEL_DIR = ROOT / "official_reproduction" / "hf_lerobot_diffusion_pusht"
 OFFICIAL_STATUS = RESULTS / "official_reproduction_status.json"
+OFFICIAL_KH_RESULTS = RESULTS / "official_kh_grid_results.csv"
 
 
 def sh(cmd: list[str], env: dict[str, str] | None = None) -> str:
@@ -90,9 +91,23 @@ def official_status() -> dict:
     }
 
 
+def official_kh_status() -> dict:
+    if not OFFICIAL_KH_RESULTS.exists():
+        return {"completed": False, "rows": [], "preferred": {}}
+    with OFFICIAL_KH_RESULTS.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    for r in rows:
+        for key in ["k", "h", "budget", "n_test", "n_envs", "max_steps", "mean_score", "success_rate_095", "policy_calls_per_episode", "nfe_per_episode"]:
+            if key in r and r[key] != "":
+                r[key] = float(r[key]) if "." in str(r[key]) else int(r[key])
+    preferred = max(rows, key=lambda r: float(r.get("mean_score", 0.0))) if rows else {}
+    return {"completed": bool(rows), "rows": rows, "preferred": preferred, "path": str(OFFICIAL_KH_RESULTS)}
+
+
 def write_environment_log() -> None:
     LOGS.mkdir(parents=True, exist_ok=True)
     off = official_status()
+    off_kh = official_kh_status()
     env = os.environ.copy()
     env["CUDA_DEVICE_MEMORY_SHARED_CACHE"] = "/tmp/finalproject-vgpu-cache.log"
     lines = [
@@ -141,6 +156,10 @@ def write_environment_log() -> None:
         f"Checkpoint size: `{off['checkpoint_size_bytes']}` bytes",
         f"50-seed official PushT mean score: `{fmt(off['preferred'].get('test_mean_score', 0.0))}`",
         f"Official eval log: `{off['preferred'].get('path', '')}`",
+        f"Official fixed `(k,h)` frontier CSV: `{off_kh.get('path', '')}`",
+        f"Best official frontier point: `(k={off_kh.get('preferred', {}).get('k', 0)}, h={off_kh.get('preferred', {}).get('h', 0)})`, "
+        f"score `{fmt(float(off_kh.get('preferred', {}).get('mean_score', 0.0)))}`, "
+        f"success `{fmt(float(off_kh.get('preferred', {}).get('success_rate_095', 0.0)))}`",
         "",
         "Compatibility patches were required for the current Python 3.12 / Gym 0.26 environment: disable "
         "shared-memory batching for the custom PushT observation space, restore the old reset return contract, "
@@ -166,8 +185,11 @@ def write_environment_log() -> None:
 
 def write_readme(summary: pd.DataFrame) -> None:
     joint = row(summary, "joint_scheduler")
+    joint_safe = row(summary, "joint_scheduler_safe")
     best = row(summary, "fixed_k2_h1")
     off = official_status()
+    off_kh = official_kh_status()
+    off_kh_best = off_kh["preferred"]
     lr = lerobot_status()
     hf_eval = lr["hf_eval"]
     smoke = lr["smoke"]
@@ -197,6 +219,10 @@ An official reproduction wrapper is included at `scripts/run_official_pusht_eval
 - 50-seed log: `{off['preferred'].get('path', '')}`.
 - Compatibility patches: `shared_memory=False`, Gym reset wrapper, Gym vector concatenate argument order.
 
+## Official `(k,h)` Frontier Check
+
+The optimized project also runs fixed `(k,h)` overrides directly through the official checkpoint with `scripts/run_official_kh_grid.py`. On a 20-seed high-budget frontier, the best tested official point is `(k={off_kh_best.get('k', 0)}, h={off_kh_best.get('h', 0)})`, with mean score `{fmt(float(off_kh_best.get('mean_score', 0.0)))}`, success `{fmt(float(off_kh_best.get('success_rate_095', 0.0)))}`, and `{fmt(float(off_kh_best.get('policy_calls_per_episode', 0.0)), 1)}` policy calls per episode. Lower-denoising points on the same high-budget family fail sharply, so the official checkpoint evidence is that denoising depth remains critical for this pretrained model.
+
 ## Near-Official LeRobot Reproduction
 
 - Model: `lerobot/diffusion_pusht`.
@@ -209,18 +235,19 @@ Important caveat: the mirror-assembled safetensors file loads and runs, but its 
 
 ## Main Result
 
-On the `B ~= 2` frontier with 8 matched seeds:
+On the `B ~= 2` frontier with 20 matched seeds:
 
 - Best fixed score baseline `(k=2, h=1)`: score `{fmt(best.score_mean)}`, success `{fmt(best.success_mean)}`, policy calls `{fmt(best.policy_calls_mean, 1)}`, smoothness cost `{fmt(best.smoothness_mean)}`.
-- Joint scheduler: score `{fmt(joint.score_mean)}`, success `{fmt(joint.success_mean)}`, policy calls `{fmt(joint.policy_calls_mean, 1)}`, smoothness cost `{fmt(joint.smoothness_mean)}`.
+- Score-oriented joint scheduler: score `{fmt(joint.score_mean)}`, success `{fmt(joint.success_mean)}`, policy calls `{fmt(joint.policy_calls_mean, 1)}`, smoothness cost `{fmt(joint.smoothness_mean)}`.
+- Safe joint scheduler: score `{fmt(joint_safe.score_mean)}`, success `{fmt(joint_safe.success_mean)}`, policy calls `{fmt(joint_safe.policy_calls_mean, 1)}`, smoothness cost `{fmt(joint_safe.smoothness_mean)}`.
 
-The joint scheduler slightly improves score while reducing policy calls and action roughness relative to the best fixed score baseline.
+The two scheduler variants expose a Pareto tradeoff. The score-oriented scheduler improves mean score while reducing calls and action roughness; the safe scheduler improves success rate while still reducing calls and smoothness cost relative to the best fixed score baseline.
 
 ## Reproduce
 
 ```bash
 cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache python scripts/eval_kh_grid.py --seeds 0 1 2 3 4 5 6 7 --episode-steps 120
+CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache python scripts/eval_kh_grid.py --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 --episode-steps 120
 python scripts/plot_iso_compute.py
 python scripts/generate_deliverables.py
 ```
@@ -235,6 +262,16 @@ CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
   --n-test 50 --n-envs 5 --n-test-vis 0 --max-steps 300
 ```
 
+Official fixed `(k,h)` frontier:
+
+```bash
+cd /root/FinalProject
+CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
+  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
+  --output-root official_reproduction/pusht_official_kh_grid_highB_n20 \
+  --n-test 20 --n-envs 5 --pairs 12,1 25,2 50,4 100,8
+```
+
 ## Outputs
 
 - Raw and summarized results: `results/`
@@ -244,6 +281,8 @@ CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
 - Environment log: `artifacts/logs/environment_log.md`
 - Completion audit: `artifacts/logs/completion_audit.md`
 - Official reproduction status: `results/official_reproduction_status.json`
+- Official `(k,h)` frontier: `results/official_kh_grid_results.csv` and `figures/official_kh_frontier.png`
+- Official fixed `(k,h)` runner: `scripts/run_official_kh_grid.py`
 - Official checkpoint eval wrapper: `scripts/run_official_pusht_eval.py`
 - Official reference notes: `official_reproduction/REFERENCE_NOTES.md`
 - LeRobot PushT smoke results: `results/lerobot_pusht_smoke_summary.json` and `results/lerobot_pusht_smoke_results.csv`
@@ -265,7 +304,8 @@ def comparison_table(summary: pd.DataFrame) -> list[list[str]]:
         ("Denoising-only point (4,2)", "fixed_k4_h2"),
         ("Long denoise/chunk (16,8)", "fixed_k16_h8"),
         ("AAC/DVAC-style h-only", "aac_dvac_h_only"),
-        ("Joint scheduler", "joint_scheduler"),
+        ("Joint scheduler (score)", "joint_scheduler"),
+        ("Joint scheduler (safe)", "joint_scheduler_safe"),
     ]
     table = [["Method", "B", "Score", "Success", "Calls", "NFE", "Smoothness"]]
     for label, method in methods:
@@ -284,8 +324,11 @@ def comparison_table(summary: pd.DataFrame) -> list[list[str]]:
 
 def write_report_markdown(summary: pd.DataFrame) -> str:
     joint = row(summary, "joint_scheduler")
+    joint_safe = row(summary, "joint_scheduler_safe")
     best = row(summary, "fixed_k2_h1")
     off = official_status()
+    off_kh = official_kh_status()
+    off_kh_best = off_kh["preferred"]
     lr = lerobot_status()
     hf_eval = lr["hf_eval"]
     smoke = lr["smoke"]
@@ -294,11 +337,23 @@ def write_report_markdown(summary: pd.DataFrame) -> str:
         ["| " + " | ".join(table_rows[0]) + " |", "| " + " | ".join(["---"] * len(table_rows[0])) + " |"]
         + ["| " + " | ".join(r) + " |" for r in table_rows[1:]]
     )
+    if len(off_kh["rows"]) >= 4:
+        official_frontier_text = (
+            f"The optimized project additionally evaluates fixed `(k,h)` overrides inside the official checkpoint runner with "
+            f"`scripts/run_official_kh_grid.py`. On a 20-seed high-budget frontier, the tested points have mean scores "
+            f"`{fmt(float(off_kh['rows'][0].get('mean_score', 0.0)))}` for `(12,1)`, "
+            f"`{fmt(float(off_kh['rows'][1].get('mean_score', 0.0)))}` for `(25,2)`, "
+            f"`{fmt(float(off_kh['rows'][2].get('mean_score', 0.0)))}` for `(50,4)`, and "
+            f"`{fmt(float(off_kh['rows'][3].get('mean_score', 0.0)))}` for `(100,8)`. This result is important because it prevents overclaiming: "
+            "the surrogate benefits from low-`k` frequent replanning, but the official pretrained checkpoint needs sufficient denoising depth before replanning frequency matters."
+        )
+    else:
+        official_frontier_text = "The official fixed `(k,h)` frontier CSV was not available when this report was generated."
     md = f"""# Joint Compute-Control Budgeting for Receding-Horizon Diffusion Policy
 
 ## Abstract
 
-Diffusion Policy produces action chunks through iterative denoising and deploys them in a receding-horizon loop. This project studies a practical inference question: under a fixed per-step compute budget, should a robot spend computation on more denoising steps or on more frequent replanning? We first reproduce the official low-dimensional Push-T checkpoint using the upstream workspace and runner, obtaining a 50-seed mean score of `{fmt(off['preferred'].get('test_mean_score', 0.0))}` in the current Python 3.12 / PyTorch 2.7 container. We then evaluate the proposed inference-time idea in a lightweight Push-T-style closed-loop surrogate and sweep denoising steps `k` and execution horizon `h`. A training-free joint scheduler chooses `(k,h)` on the same `B ~= k/h` frontier. On the `B ~= 2` frontier, the joint scheduler obtains score `{fmt(joint.score_mean)}` versus `{fmt(best.score_mean)}` for the best fixed score baseline `(2,1)`, while reducing policy calls from `{fmt(best.policy_calls_mean,1)}` to `{fmt(joint.policy_calls_mean,1)}` and smoothness cost from `{fmt(best.smoothness_mean)}` to `{fmt(joint.smoothness_mean)}`.
+Diffusion Policy produces action chunks through iterative denoising and deploys them in a receding-horizon loop. This project studies a practical inference question: under a fixed per-step compute budget, should a robot spend computation on more denoising steps or on more frequent replanning? We first reproduce the official low-dimensional Push-T checkpoint using the upstream workspace and runner, obtaining a 50-seed mean score of `{fmt(off['preferred'].get('test_mean_score', 0.0))}` in the current Python 3.12 / PyTorch 2.7 container. We then evaluate the proposed inference-time idea in a lightweight Push-T-style closed-loop surrogate and sweep denoising steps `k` and execution horizon `h`. A training-free joint scheduler chooses `(k,h)` on the same `B ~= k/h` frontier. On the `B ~= 2` frontier with 20 matched seeds, the score-oriented scheduler obtains score `{fmt(joint.score_mean)}` versus `{fmt(best.score_mean)}` for the best fixed score baseline `(2,1)`, while reducing policy calls from `{fmt(best.policy_calls_mean,1)}` to `{fmt(joint.policy_calls_mean,1)}` and smoothness cost from `{fmt(best.smoothness_mean)}` to `{fmt(joint.smoothness_mean)}`. A conservative safe scheduler reaches success `{fmt(joint_safe.success_mean)}` versus `{fmt(best.success_mean)}` for `(2,1)`. A supplementary official-checkpoint frontier shows that the pretrained official policy remains strongly denoising-limited at low `k`: the best tested official point is `(k={off_kh_best.get('k', 0)}, h={off_kh_best.get('h', 0)})`, score `{fmt(float(off_kh_best.get('mean_score', 0.0)))}`, success `{fmt(float(off_kh_best.get('success_rate_095', 0.0)))}`.
 
 ## 1. Introduction
 
@@ -306,7 +361,7 @@ Diffusion Policy is a strong visuomotor imitation learning method because iterat
 
 ## 2. Related Work
 
-The reproduced base paper is **Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023). The method generates action sequences with a conditional diffusion model and executes them in a receding-horizon control loop. Recent adaptive action chunking, adaptive denoising, fast denoising, and uncertainty-based failure detection methods study related single-axis decisions. The novelty boundary here is intentionally narrower: the project evaluates denoising and replanning jointly under an iso-compute constraint and compares a joint scheduler against fixed and single-axis baselines.
+The reproduced base paper is **Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023). The method generates action sequences with a conditional diffusion model and executes them in a receding-horizon control loop. ACT shows why action chunks can stabilize imitation learning, while newer accelerated-policy work such as Consistency Policy focuses on reducing diffusion-policy inference latency through distillation. DDIM and DPM-Solver establish the broader diffusion-model theme that sampling step count can often be traded against quality. Recent component analyses of Diffusion Policy also isolate receding horizon and action-sequence execution as major design choices. The novelty boundary here is intentionally narrower: the project evaluates denoising and replanning jointly under an iso-compute constraint and compares a joint scheduler against fixed and single-axis baselines.
 
 ## 3. Problem Formulation
 
@@ -335,6 +390,8 @@ CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
 
 The official reproduction reference note in `official_reproduction/REFERENCE_NOTES.md` records the upstream checkpoint path, command pattern, and original conda environment mismatch.
 
+{official_frontier_text}
+
 ## 5. Method
 
 The fixed runner evaluates every `(k,h)` pair. Larger `k` reduces residual action noise and mode bias in the diffusion-like planner. Larger `h` reduces policy calls but increases open-loop staleness in contact. The proposed training-free scheduler is restricted to the `B=2` candidate set and uses state features available in the simulator:
@@ -344,13 +401,13 @@ The fixed runner evaluates every `(k,h)` pair. Larger `k` reduces residual actio
 - contact proxy,
 - recent progress.
 
-The final rule selects `(4,2)` in free-space approach and final alignment, and `(2,1)` during close-contact pushing or unstable progress. This keeps average `B` near 2 while shifting control frequency toward high-risk phases.
+The score-oriented rule selects `(4,2)` in free-space approach and final alignment, and `(2,1)` during close-contact pushing or unstable progress. A conservative safe variant uses the same candidate set but switches to `(2,1)` earlier when contact or negative progress is detected. Both keep average `B` near 2 while shifting control frequency toward high-risk phases.
 
 ## 6. Results
 
 {md_table}
 
-The static grid shows that compute-equivalent choices are not interchangeable. On the `B=2` frontier, `(2,1)` gives the highest fixed score because the task is contact sensitive and benefits from frequent replanning. However, `(2,1)` also creates the largest action roughness. The joint scheduler preserves high-frequency updates near contact while using `(4,2)` in easier phases. This raises mean score to `{fmt(joint.score_mean)}` and reduces smoothness cost by about `{fmt(100*(best.smoothness_mean-joint.smoothness_mean)/best.smoothness_mean,1)}%` relative to `(2,1)`.
+The static grid shows that compute-equivalent choices are not interchangeable. On the `B=2` frontier, `(2,1)` gives the highest fixed score because the surrogate task is contact sensitive and benefits from frequent replanning. However, `(2,1)` also creates the largest action roughness. The score-oriented scheduler preserves high-frequency updates near contact while using `(4,2)` in easier phases. This raises mean score to `{fmt(joint.score_mean)}` and reduces smoothness cost by about `{fmt(100*(best.smoothness_mean-joint.smoothness_mean)/best.smoothness_mean,1)}%` relative to `(2,1)`. The safe scheduler trades some mean score for reliability, reaching success `{fmt(joint_safe.success_mean)}` while still reducing policy calls from `{fmt(best.policy_calls_mean,1)}` to `{fmt(joint_safe.policy_calls_mean,1)}`.
 
 ## 7. Phase-Wise Analysis
 
@@ -358,7 +415,7 @@ The phase-wise plot separates free-space approach, contact pushing, and near-goa
 
 ## 8. Limitations
 
-The largest limitation is that the official checkpoint evaluation runs in a compatibility environment, not the original Python 3.9 / PyTorch 1.12 conda stack, and its 50-seed score is below the checkpoint filename score. A LeRobot checkpoint was also downloaded through an alternate mirror, loaded, and executed locally, but the mirror-assembled file did not pass HF LFS SHA verification. The scheduler-improvement environment is a surrogate, so those numeric values should not be reported as official Diffusion Policy benchmark performance. The scheduler is hand-tuned on the same task family, the compute model uses `k/h` rather than measured neural network latency, and there is no real-robot validation.
+The largest limitation is that the official checkpoint evaluation runs in a compatibility environment, not the original Python 3.9 / PyTorch 1.12 conda stack, and its 50-seed score is below the checkpoint filename score. A LeRobot checkpoint was also downloaded through an alternate mirror, loaded, and executed locally, but the mirror-assembled file did not pass HF LFS SHA verification. The scheduler-improvement environment is a surrogate, so those numeric values should not be reported as official Diffusion Policy benchmark performance. The official `(k,h)` frontier is therefore included as a sanity check and shows model-dependent behavior: low-denoising frequent replanning is not enough for the official checkpoint. The scheduler is hand-tuned on the same task family, the compute model uses `k/h` rather than measured neural network latency, and there is no real-robot validation.
 
 ## 9. Conclusion
 
@@ -371,6 +428,11 @@ The experiment supports the project hypothesis: under the same amortized inferen
 - LeRobot model card used for near-official PushT reference: https://huggingface.co/lerobot/diffusion_pusht
 - Paper: Diffusion Policy: Visuomotor Policy Learning via Action Diffusion, RSS 2023 / arXiv 2303.04137.
 - Official checkpoint example from the repository README: `low_dim/pusht/diffusion_policy_cnn/train_0/checkpoints/epoch=0550-test_mean_score=0.969.ckpt`.
+- Action Chunking with Transformers: Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware, RSS 2023 / arXiv 2304.13705.
+- Consistency Policy: Accelerated Visuomotor Policies via Consistency Distillation, RSS 2024 / arXiv 2405.07503.
+- Denoising Diffusion Implicit Models, ICLR 2021 / arXiv 2010.02502.
+- DPM-Solver: A Fast ODE Solver for Diffusion Probabilistic Model Sampling in Around 10 Steps, NeurIPS 2022 / arXiv 2206.00927.
+- Unpacking the Individual Components of Diffusion Policy, arXiv 2412.00084.
 """
     REPORT.mkdir(parents=True, exist_ok=True)
     (REPORT / "final_report.md").write_text(md)
@@ -385,7 +447,12 @@ def add_wrapped(story, text: str, style, width: int = 95) -> None:
 
 
 def write_report_pdf(summary: pd.DataFrame) -> None:
+    joint = row(summary, "joint_scheduler")
+    joint_safe = row(summary, "joint_scheduler_safe")
+    best = row(summary, "fixed_k2_h1")
     off = official_status()
+    off_kh = official_kh_status()
+    off_kh_best = off_kh["preferred"]
     lr = lerobot_status()
     hf_eval = lr["hf_eval"]
     smoke = lr["smoke"]
@@ -401,11 +468,12 @@ def write_report_pdf(summary: pd.DataFrame) -> None:
         Spacer(1, 0.15 * inch),
     ]
     sections = [
-        ("Abstract", f"Diffusion Policy uses iterative action denoising and receding-horizon execution. This project reproduces the official low-dimensional Push-T checkpoint with the upstream workspace and runner, obtaining a 50-seed mean score of {fmt(off['preferred'].get('test_mean_score', 0.0))} in the current compatibility environment. It then evaluates how to allocate a fixed inference budget between denoising quality and replanning frequency in a deterministic Push-T-style surrogate."),
+        ("Abstract", f"Diffusion Policy uses iterative action denoising and receding-horizon execution. This project reproduces the official low-dimensional Push-T checkpoint with the upstream workspace and runner, obtaining a 50-seed mean score of {fmt(off['preferred'].get('test_mean_score', 0.0))} in the current compatibility environment. It then evaluates how to allocate a fixed inference budget between denoising quality and replanning frequency in a deterministic Push-T-style surrogate. The optimized version uses 20 surrogate seeds, two scheduler variants, and a supplementary official fixed-(k,h) frontier."),
         ("Problem", "We define k as denoising steps per policy call, h as executed controls before replanning, and B ~= k/h as amortized compute per control step. The grid evaluates k in {2,4,8,16} and h in {1,2,4,8}, with main analysis on B=1, B=2, and B=4 frontiers."),
         ("Official Reproduction", f"The official source was acquired through a GitHub codeload archive after git clone instability, and the 1044185793-byte Push-T checkpoint was downloaded from the project server. The 50-seed official runner result is {fmt(off['preferred'].get('test_mean_score', 0.0))}; the checkpoint filename reports 0.969, so the difference is recorded as an environment-version reproduction gap."),
+        ("Official Fixed Frontier", f"With the official checkpoint, a 20-seed fixed-(k,h) high-budget frontier strongly favors denoising depth: the best tested point is (k={off_kh_best.get('k', 0)}, h={off_kh_best.get('h', 0)}) with score {fmt(float(off_kh_best.get('mean_score', 0.0)))} and success {fmt(float(off_kh_best.get('success_rate_095', 0.0)))}. This official check constrains the surrogate claim and shows that allocation behavior is model-dependent."),
         ("LeRobot Supplement", f"The LeRobot lerobot/diffusion_pusht model card reports 500-episode average max reward {fmt(hf_eval.get('avg_max_reward', 0.0))} and success {fmt(hf_eval.get('pc_success', 0.0), 1)}%. The local mirror-downloaded checkpoint loads and runs in gym-pusht; a 300-step, {smoke.get('num_inference_steps', 0)}-denoising-step smoke test reached max reward {fmt(smoke.get('mean_max_reward', 0.0))}. Because the file SHA did not match HF LFS metadata, local rollout results are marked as smoke verification."),
-        ("Method", "A fixed runner evaluates every (k,h). A training-free joint scheduler operates on the B=2 frontier. It selects (4,2) in free-space approach and final alignment, and (2,1) during close-contact pushing or unstable progress."),
+        ("Method", "A fixed runner evaluates every (k,h). A training-free score-oriented joint scheduler operates on the B=2 frontier. It selects (4,2) in free-space approach and final alignment, and (2,1) during close-contact pushing or unstable progress. A safe variant switches to (2,1) earlier to favor reliability."),
     ]
     for title, text in sections:
         story.append(Paragraph(title, styles["H"]))
@@ -423,16 +491,16 @@ def write_report_pdf(summary: pd.DataFrame) -> None:
     story.append(Paragraph("Main Comparison", styles["H"]))
     story.append(table)
     story.append(Spacer(1, 0.15 * inch))
-    for fig in ["kh_score_heatmap.png", "iso_compute_curves.png", "pareto_score_compute.png", "main_comparison_bars.png", "smoothness_vs_compute.png", "phase_wise_scores.png"]:
+    for fig in ["kh_score_heatmap.png", "iso_compute_curves.png", "pareto_score_compute.png", "main_comparison_bars.png", "smoothness_vs_compute.png", "phase_wise_scores.png", "official_kh_frontier.png"]:
         path = FIGURES / fig
         if path.exists():
             story.append(Image(str(path), width=6.2 * inch, height=4.1 * inch))
             story.append(Spacer(1, 0.08 * inch))
     for title, text in [
-        ("Results", "The joint scheduler reaches score 0.937 at average B=2.006, compared with 0.925 for the best fixed score baseline (2,1). It reduces policy calls from 120.0 to 90.8 and smoothness cost from 0.444 to 0.271."),
-        ("Limitations", "The scheduler-improvement numeric results are from the surrogate, not official Diffusion Policy checkpoint rollouts. The official checkpoint run uses compatibility patches for Python 3.12 / Gym 0.26, and the LeRobot mirror checkpoint is executable locally but not SHA-verified. The compute model is approximate, the scheduler is rule-based, and the experiment is limited to one task family."),
+        ("Results", f"The score-oriented scheduler reaches score {fmt(joint.score_mean)} at average B={fmt(joint.avg_budget_mean)}, compared with {fmt(best.score_mean)} for the best fixed score baseline (2,1). It reduces policy calls from {fmt(best.policy_calls_mean,1)} to {fmt(joint.policy_calls_mean,1)} and smoothness cost from {fmt(best.smoothness_mean)} to {fmt(joint.smoothness_mean)}. The safe scheduler reaches success {fmt(joint_safe.success_mean)} and policy calls {fmt(joint_safe.policy_calls_mean,1)}."),
+        ("Limitations", "The scheduler-improvement numeric results are from the surrogate, not official Diffusion Policy checkpoint rollouts. The official checkpoint run uses compatibility patches for Python 3.12 / Gym 0.26, and the LeRobot mirror checkpoint is executable locally but not SHA-verified. The official fixed-(k,h) frontier shows model-dependent allocation behavior. The compute model is approximate, the scheduler is rule-based, and the experiment is limited to one task family."),
         ("Conclusion", "The experiment supports the hypothesis that denoising and replanning should be allocated jointly. Contact phases favor frequent replanning; easier phases can use a longer chunk and more denoising while staying on the same compute frontier."),
-        ("References", "Diffusion Policy project page: https://diffusion-policy.cs.columbia.edu/. Official code: https://github.com/real-stanford/diffusion_policy. LeRobot model card: https://huggingface.co/lerobot/diffusion_pusht. Paper: Diffusion Policy: Visuomotor Policy Learning via Action Diffusion, RSS 2023 / arXiv 2303.04137."),
+        ("References", "Diffusion Policy project page: https://diffusion-policy.cs.columbia.edu/. Official code: https://github.com/real-stanford/diffusion_policy. LeRobot model card: https://huggingface.co/lerobot/diffusion_pusht. Related work: ACT / arXiv 2304.13705, Consistency Policy / arXiv 2405.07503, DDIM / arXiv 2010.02502, DPM-Solver / arXiv 2206.00927, and Unpacking the Individual Components of Diffusion Policy / arXiv 2412.00084."),
     ]:
         story.append(Paragraph(title, styles["H"]))
         add_wrapped(story, text, styles["Body"])
@@ -474,6 +542,8 @@ def add_picture(slide, name: str, x=6.6, y=1.35, w=6.1) -> None:
 
 def write_slides(summary: pd.DataFrame) -> None:
     off = official_status()
+    off_kh = official_kh_status()
+    off_kh_best = off_kh["preferred"]
     lr = lerobot_status()
     hf_eval = lr["hf_eval"]
     smoke = lr["smoke"]
@@ -492,20 +562,22 @@ def write_slides(summary: pd.DataFrame) -> None:
          ["Should compute be spent on larger k or smaller h?", "k: denoising steps per policy call", "h: executed controls before replanning", "B ~= k / h is the iso-compute budget"], "iso_compute_curves.png"),
         ("Reproduction Setup", None,
          ["Official source acquired via GitHub codeload archive", "Official Push-T checkpoint downloaded: 1044185793 bytes", f"50-seed official runner score: {fmt(off['preferred'].get('test_mean_score', 0.0))}", "Compatibility patches needed for Python 3.12 / Gym 0.26"], None),
+        ("Official Frontier", None,
+         [f"20-seed official fixed-(k,h) sweep", f"Best tested official point: ({off_kh_best.get('k', 0)},{off_kh_best.get('h', 0)})", f"Score: {fmt(float(off_kh_best.get('mean_score', 0.0)))}, success: {fmt(float(off_kh_best.get('success_rate_095', 0.0)))}", "Low-k frequent replanning does not rescue this checkpoint"], "official_kh_frontier.png"),
         ("LeRobot PushT Checkpoint", None,
          [f"Model card 500-episode max reward: {fmt(hf_eval.get('avg_max_reward', 0.0))}", f"Model card success rate: {fmt(hf_eval.get('pc_success', 0.0), 1)}%", "Local safetensors loads and runs in real gym-pusht", f"Local smoke: max reward {fmt(smoke.get('mean_max_reward', 0.0))}, {smoke.get('num_inference_steps', 0)} denoising steps", "Caveat: mirror file did not pass HF LFS SHA check"], None),
         ("Static Grid", None,
          ["Grid: k in {2,4,8,16}, h in {1,2,4,8}", "Contact-rich pushing makes equal-compute points behave differently", "The best fixed B=2 score point is (2,1)"], "kh_score_heatmap.png"),
         ("Joint Scheduler", None,
-         ["Training-free rule on the B=2 frontier", "Use (4,2) for free-space approach and final alignment", "Use (2,1) during close-contact pushing or unstable progress", "Goal: keep compute fixed while moving reactivity to high-risk phases"], None),
+         ["Training-free rule on the B=2 frontier", "Score variant uses (4,2) in easier phases and (2,1) near contact", "Safe variant switches to (2,1) earlier", "Goal: keep compute fixed while moving reactivity to high-risk phases"], None),
         ("Main Results", None,
-         [f"Joint score: {fmt(row(summary, 'joint_scheduler').score_mean)}", f"Best fixed B=2 score: {fmt(row(summary, 'fixed_k2_h1').score_mean)}", "Policy calls: 90.8 vs 120.0", "Smoothness cost: 0.271 vs 0.444"], "main_comparison_bars.png"),
+         [f"Score scheduler: score {fmt(row(summary, 'joint_scheduler').score_mean)}, calls {fmt(row(summary, 'joint_scheduler').policy_calls_mean,1)}", f"Safe scheduler: success {fmt(row(summary, 'joint_scheduler_safe').success_mean)}, calls {fmt(row(summary, 'joint_scheduler_safe').policy_calls_mean,1)}", f"Best fixed B=2: score {fmt(row(summary, 'fixed_k2_h1').score_mean)}, success {fmt(row(summary, 'fixed_k2_h1').success_mean)}", "Result is a Pareto tradeoff, not a single universal winner"], "main_comparison_bars.png"),
         ("Phase-Wise Analysis", None,
          ["Free-space approach tolerates longer chunks", "Contact pushing needs frequent replanning", "Near-goal alignment benefits from smoother denoised chunks"], "phase_wise_scores.png"),
         ("Limitations", None,
-         ["Improvement numbers are from the surrogate, not official benchmark rollouts", "Official run uses compatibility patches and scores below checkpoint filename", "LeRobot checkpoint path is executable but not SHA-verified", "B=k/h is an approximate compute model", "No real-robot validation"], None),
+         ["Improvement numbers are from the surrogate, not official benchmark rollouts", "Official run uses compatibility patches and scores below checkpoint filename", "Official fixed-(k,h) frontier favors high denoising", "LeRobot checkpoint path is executable but not SHA-verified", "B=k/h is an approximate compute model", "No real-robot validation"], None),
         ("Takeaways", None,
-         ["Denoising and replanning are coupled deployment decisions", "Best allocation changes by task phase", "A simple joint scheduler can improve the score-smoothness tradeoff under the same budget"], None),
+         ["Denoising and replanning are coupled deployment decisions", "Best allocation changes by task phase and checkpoint", "A simple joint scheduler can improve the score-smoothness or success-cost tradeoff under the same budget"], None),
     ]
     for title, subtitle, bullets, picture in slides:
         slide = prs.slides.add_slide(blank)
@@ -542,7 +614,7 @@ def write_slides(summary: pd.DataFrame) -> None:
 
 English or Chinese can be used for the oral presentation. Suggested short Chinese framing:
 
-本项目复现并分析 Diffusion Policy 的推理时结构：每次策略调用需要若干 denoising steps，并在 receding horizon 中执行一段 action chunk。官方源码通过 GitHub archive 获取，官方 Push-T checkpoint 已下载并跑通 50 个 test seed；当前 Python 3.12 / Gym 0.26 环境需要兼容补丁，所以实测分数低于 checkpoint 文件名中的 0.969。核心改进问题是在固定预算下，计算量应该用于更高质量的 denoising，还是更频繁地 replanning。实验显示，在接触阶段高频 replanning 更重要，而在 free-space 和最终对齐阶段可以使用更长 chunk 和更多 denoising。联合调度器在相同平均预算下提升了 score，同时减少了 policy calls 和动作抖动。
+本项目复现并分析 Diffusion Policy 的推理时结构：每次策略调用需要若干 denoising steps，并在 receding horizon 中执行一段 action chunk。官方源码通过 GitHub archive 获取，官方 Push-T checkpoint 已下载并跑通 50 个 test seed；当前 Python 3.12 / Gym 0.26 环境需要兼容补丁，所以实测分数低于 checkpoint 文件名中的 0.969。优化版增加了官方 checkpoint 的固定 `(k,h)` frontier：结果显示官方模型在低 denoising step 下性能明显下降，说明不能把 surrogate 结论过度推广。核心改进问题是在固定预算下，计算量应该用于更高质量的 denoising，还是更频繁地 replanning。20 个 matched seeds 的 surrogate 实验显示，score-oriented scheduler 提高均分并降低 policy calls/动作抖动，safe scheduler 则提高 success，这形成了更清晰的 Pareto tradeoff。
 """
     (SLIDES / "oral_notes.md").write_text(notes)
 

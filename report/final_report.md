@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Diffusion Policy produces action chunks through iterative denoising and deploys them in a receding-horizon loop. This project studies a practical inference question: under a fixed per-step compute budget, should a robot spend computation on more denoising steps or on more frequent replanning? We first reproduce the official low-dimensional Push-T checkpoint using the upstream workspace and runner, obtaining a 50-seed mean score of `0.919` in the current Python 3.12 / PyTorch 2.7 container. We then evaluate the proposed inference-time idea in a lightweight Push-T-style closed-loop surrogate and sweep denoising steps `k` and execution horizon `h`. A training-free joint scheduler chooses `(k,h)` on the same `B ~= k/h` frontier. On the `B ~= 2` frontier, the joint scheduler obtains score `0.937` versus `0.925` for the best fixed score baseline `(2,1)`, while reducing policy calls from `120.0` to `90.8` and smoothness cost from `0.444` to `0.271`.
+Diffusion Policy produces action chunks through iterative denoising and deploys them in a receding-horizon loop. This project studies a practical inference question: under a fixed per-step compute budget, should a robot spend computation on more denoising steps or on more frequent replanning? We first reproduce the official low-dimensional Push-T checkpoint using the upstream workspace and runner, obtaining a 50-seed mean score of `0.919` in the current Python 3.12 / PyTorch 2.7 container. We then evaluate the proposed inference-time idea in a lightweight Push-T-style closed-loop surrogate and sweep denoising steps `k` and execution horizon `h`. A training-free joint scheduler chooses `(k,h)` on the same `B ~= k/h` frontier. On the `B ~= 2` frontier with 20 matched seeds, the score-oriented scheduler obtains score `0.893` versus `0.871` for the best fixed score baseline `(2,1)`, while reducing policy calls from `120.0` to `89.2` and smoothness cost from `0.420` to `0.257`. A conservative safe scheduler reaches success `0.950` versus `0.900` for `(2,1)`. A supplementary official-checkpoint frontier shows that the pretrained official policy remains strongly denoising-limited at low `k`: the best tested official point is `(k=100, h=8)`, score `0.949`, success `0.950`.
 
 ## 1. Introduction
 
@@ -10,7 +10,7 @@ Diffusion Policy is a strong visuomotor imitation learning method because iterat
 
 ## 2. Related Work
 
-The reproduced base paper is **Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023). The method generates action sequences with a conditional diffusion model and executes them in a receding-horizon control loop. Recent adaptive action chunking, adaptive denoising, fast denoising, and uncertainty-based failure detection methods study related single-axis decisions. The novelty boundary here is intentionally narrower: the project evaluates denoising and replanning jointly under an iso-compute constraint and compares a joint scheduler against fixed and single-axis baselines.
+The reproduced base paper is **Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023). The method generates action sequences with a conditional diffusion model and executes them in a receding-horizon control loop. ACT shows why action chunks can stabilize imitation learning, while newer accelerated-policy work such as Consistency Policy focuses on reducing diffusion-policy inference latency through distillation. DDIM and DPM-Solver establish the broader diffusion-model theme that sampling step count can often be traded against quality. Recent component analyses of Diffusion Policy also isolate receding horizon and action-sequence execution as major design choices. The novelty boundary here is intentionally narrower: the project evaluates denoising and replanning jointly under an iso-compute constraint and compares a joint scheduler against fixed and single-axis baselines.
 
 ## 3. Problem Formulation
 
@@ -36,6 +36,8 @@ CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache   /root/Final
 
 The official reproduction reference note in `official_reproduction/REFERENCE_NOTES.md` records the upstream checkpoint path, command pattern, and original conda environment mismatch.
 
+The optimized project additionally evaluates fixed `(k,h)` overrides inside the official checkpoint runner with `scripts/run_official_kh_grid.py`. On a 20-seed high-budget frontier, the tested points have mean scores `0.107` for `(12,1)`, `0.155` for `(25,2)`, `0.653` for `(50,4)`, and `0.949` for `(100,8)`. This result is important because it prevents overclaiming: the surrogate benefits from low-`k` frequent replanning, but the official pretrained checkpoint needs sufficient denoising depth before replanning frequency matters.
+
 ## 5. Method
 
 The fixed runner evaluates every `(k,h)` pair. Larger `k` reduces residual action noise and mode bias in the diffusion-like planner. Larger `h` reduces policy calls but increases open-loop staleness in contact. The proposed training-free scheduler is restricted to the `B=2` candidate set and uses state features available in the simulator:
@@ -45,20 +47,21 @@ The fixed runner evaluates every `(k,h)` pair. Larger `k` reduces residual actio
 - contact proxy,
 - recent progress.
 
-The final rule selects `(4,2)` in free-space approach and final alignment, and `(2,1)` during close-contact pushing or unstable progress. This keeps average `B` near 2 while shifting control frequency toward high-risk phases.
+The score-oriented rule selects `(4,2)` in free-space approach and final alignment, and `(2,1)` during close-contact pushing or unstable progress. A conservative safe variant uses the same candidate set but switches to `(2,1)` earlier when contact or negative progress is detected. Both keep average `B` near 2 while shifting control frequency toward high-risk phases.
 
 ## 6. Results
 
 | Method | B | Score | Success | Calls | NFE | Smoothness |
 | --- | --- | --- | --- | --- | --- | --- |
-| Default DP-style (8,4) | 2.00 | 0.747 | 0.625 | 30.0 | 240.0 | 0.036 |
-| Best fixed B=2 (2,1) | 2.00 | 0.925 | 1.000 | 120.0 | 240.0 | 0.444 |
-| Denoising-only point (4,2) | 2.00 | 0.788 | 0.875 | 60.0 | 240.0 | 0.113 |
-| Long denoise/chunk (16,8) | 2.00 | 0.350 | 0.125 | 15.0 | 240.0 | 0.007 |
-| AAC/DVAC-style h-only | 2.62 | 0.731 | 0.500 | 39.4 | 315.0 | 0.048 |
-| Joint scheduler | 2.01 | 0.937 | 1.000 | 90.8 | 240.8 | 0.271 |
+| Default DP-style (8,4) | 2.00 | 0.704 | 0.550 | 30.0 | 240.0 | 0.035 |
+| Best fixed B=2 (2,1) | 2.00 | 0.871 | 0.900 | 120.0 | 240.0 | 0.420 |
+| Denoising-only point (4,2) | 2.00 | 0.756 | 0.700 | 60.0 | 240.0 | 0.105 |
+| Long denoise/chunk (16,8) | 2.00 | 0.523 | 0.200 | 15.0 | 240.0 | 0.009 |
+| AAC/DVAC-style h-only | 2.60 | 0.728 | 0.550 | 39.0 | 312.4 | 0.046 |
+| Joint scheduler (score) | 2.00 | 0.893 | 0.850 | 89.2 | 240.6 | 0.257 |
+| Joint scheduler (safe) | 2.00 | 0.863 | 0.950 | 105.3 | 240.3 | 0.340 |
 
-The static grid shows that compute-equivalent choices are not interchangeable. On the `B=2` frontier, `(2,1)` gives the highest fixed score because the task is contact sensitive and benefits from frequent replanning. However, `(2,1)` also creates the largest action roughness. The joint scheduler preserves high-frequency updates near contact while using `(4,2)` in easier phases. This raises mean score to `0.937` and reduces smoothness cost by about `39.0%` relative to `(2,1)`.
+The static grid shows that compute-equivalent choices are not interchangeable. On the `B=2` frontier, `(2,1)` gives the highest fixed score because the surrogate task is contact sensitive and benefits from frequent replanning. However, `(2,1)` also creates the largest action roughness. The score-oriented scheduler preserves high-frequency updates near contact while using `(4,2)` in easier phases. This raises mean score to `0.893` and reduces smoothness cost by about `38.7%` relative to `(2,1)`. The safe scheduler trades some mean score for reliability, reaching success `0.950` while still reducing policy calls from `120.0` to `105.3`.
 
 ## 7. Phase-Wise Analysis
 
@@ -66,7 +69,7 @@ The phase-wise plot separates free-space approach, contact pushing, and near-goa
 
 ## 8. Limitations
 
-The largest limitation is that the official checkpoint evaluation runs in a compatibility environment, not the original Python 3.9 / PyTorch 1.12 conda stack, and its 50-seed score is below the checkpoint filename score. A LeRobot checkpoint was also downloaded through an alternate mirror, loaded, and executed locally, but the mirror-assembled file did not pass HF LFS SHA verification. The scheduler-improvement environment is a surrogate, so those numeric values should not be reported as official Diffusion Policy benchmark performance. The scheduler is hand-tuned on the same task family, the compute model uses `k/h` rather than measured neural network latency, and there is no real-robot validation.
+The largest limitation is that the official checkpoint evaluation runs in a compatibility environment, not the original Python 3.9 / PyTorch 1.12 conda stack, and its 50-seed score is below the checkpoint filename score. A LeRobot checkpoint was also downloaded through an alternate mirror, loaded, and executed locally, but the mirror-assembled file did not pass HF LFS SHA verification. The scheduler-improvement environment is a surrogate, so those numeric values should not be reported as official Diffusion Policy benchmark performance. The official `(k,h)` frontier is therefore included as a sanity check and shows model-dependent behavior: low-denoising frequent replanning is not enough for the official checkpoint. The scheduler is hand-tuned on the same task family, the compute model uses `k/h` rather than measured neural network latency, and there is no real-robot validation.
 
 ## 9. Conclusion
 
@@ -79,3 +82,8 @@ The experiment supports the project hypothesis: under the same amortized inferen
 - LeRobot model card used for near-official PushT reference: https://huggingface.co/lerobot/diffusion_pusht
 - Paper: Diffusion Policy: Visuomotor Policy Learning via Action Diffusion, RSS 2023 / arXiv 2303.04137.
 - Official checkpoint example from the repository README: `low_dim/pusht/diffusion_policy_cnn/train_0/checkpoints/epoch=0550-test_mean_score=0.969.ckpt`.
+- Action Chunking with Transformers: Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware, RSS 2023 / arXiv 2304.13705.
+- Consistency Policy: Accelerated Visuomotor Policies via Consistency Distillation, RSS 2024 / arXiv 2405.07503.
+- Denoising Diffusion Implicit Models, ICLR 2021 / arXiv 2010.02502.
+- DPM-Solver: A Fast ODE Solver for Diffusion Probabilistic Model Sampling in Around 10 Steps, NeurIPS 2022 / arXiv 2206.00927.
+- Unpacking the Individual Components of Diffusion Policy, arXiv 2412.00084.

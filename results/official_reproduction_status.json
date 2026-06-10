@@ -66,6 +66,119 @@
   },
   "official_eval_script": "/root/FinalProject/scripts/run_official_diffusion_policy_eval.sh",
   "official_eval_wrapper": "/root/FinalProject/scripts/run_official_pusht_eval.py",
+  "official_kh_grid": {
+    "best_by_mean_score": {
+      "budget": 12.5,
+      "h": 8,
+      "k": 100,
+      "log_path": "official_reproduction/pusht_official_kh_grid_highB_n20/k100_h8/eval_log.json",
+      "max_score": 1.0,
+      "max_steps": 300,
+      "mean_score": 0.9485482200015596,
+      "method": "official_fixed_k100_h8",
+      "min_score": 0.18707851190424016,
+      "n_envs": 5,
+      "n_test": 20,
+      "nfe_per_episode": 3800.0,
+      "policy_calls_per_episode": 38.0,
+      "std_score": 0.17976942506309393,
+      "success_rate_095": 0.95
+    },
+    "completed": true,
+    "interpretation": "For the official pretrained PushT checkpoint, high denoising depth dominates the tested high-budget frontier; low-k frequent replanning does not recover performance.",
+    "n_envs": 5,
+    "n_test": 20,
+    "output_root": "/root/FinalProject/official_reproduction/pusht_official_kh_grid_highB_n20",
+    "pairs": [
+      [
+        12,
+        1
+      ],
+      [
+        25,
+        2
+      ],
+      [
+        50,
+        4
+      ],
+      [
+        100,
+        8
+      ]
+    ],
+    "path": "/root/FinalProject/results/official_kh_grid_results.csv",
+    "results": [
+      {
+        "budget": 12.0,
+        "h": 1,
+        "k": 12,
+        "log_path": "official_reproduction/pusht_official_kh_grid_highB_n20/k12_h1/eval_log.json",
+        "max_score": 0.5032515300644522,
+        "max_steps": 300,
+        "mean_score": 0.10652993045961456,
+        "method": "official_fixed_k12_h1",
+        "min_score": 0.0,
+        "n_envs": 5,
+        "n_test": 20,
+        "nfe_per_episode": 3600.0,
+        "policy_calls_per_episode": 300.0,
+        "std_score": 0.1328684910023795,
+        "success_rate_095": 0.0
+      },
+      {
+        "budget": 12.5,
+        "h": 2,
+        "k": 25,
+        "log_path": "official_reproduction/pusht_official_kh_grid_highB_n20/k25_h2/eval_log.json",
+        "max_score": 0.4676067189950092,
+        "max_steps": 300,
+        "mean_score": 0.15480444475860594,
+        "method": "official_fixed_k25_h2",
+        "min_score": 0.0,
+        "n_envs": 5,
+        "n_test": 20,
+        "nfe_per_episode": 3750.0,
+        "policy_calls_per_episode": 150.0,
+        "std_score": 0.15934720799360516,
+        "success_rate_095": 0.0
+      },
+      {
+        "budget": 12.5,
+        "h": 4,
+        "k": 50,
+        "log_path": "official_reproduction/pusht_official_kh_grid_highB_n20/k50_h4/eval_log.json",
+        "max_score": 1.0,
+        "max_steps": 300,
+        "mean_score": 0.6531389287361444,
+        "method": "official_fixed_k50_h4",
+        "min_score": 0.0,
+        "n_envs": 5,
+        "n_test": 20,
+        "nfe_per_episode": 3750.0,
+        "policy_calls_per_episode": 75.0,
+        "std_score": 0.411571698306154,
+        "success_rate_095": 0.35
+      },
+      {
+        "budget": 12.5,
+        "h": 8,
+        "k": 100,
+        "log_path": "official_reproduction/pusht_official_kh_grid_highB_n20/k100_h8/eval_log.json",
+        "max_score": 1.0,
+        "max_steps": 300,
+        "mean_score": 0.9485482200015596,
+        "method": "official_fixed_k100_h8",
+        "min_score": 0.18707851190424016,
+        "n_envs": 5,
+        "n_test": 20,
+        "nfe_per_episode": 3800.0,
+        "policy_calls_per_episode": 38.0,
+        "std_score": 0.17976942506309393,
+        "success_rate_095": 0.95
+      }
+    ]
+  },
   "official_repo": "https://github.com/real-stanford/diffusion_policy.git",
   "official_source_archive": "/root/FinalProject/official_reproduction/diffusion_policy_main.tar.gz",
   "official_source_tree": "/root/FinalProject/official_reproduction/diffusion_policy_source",

@@ -5,6 +5,9 @@ candidates:
   - {k: 4, h: 2}
   - {k: 8, h: 4}
   - {k: 16, h: 8}
+variants:
+  score_oriented: joint_scheduler
+  conservative_success: joint_scheduler_safe
 rules:
   high_risk_contact:
     condition: contact or pusher_object_distance < 0.14
@@ -15,6 +18,22 @@ rules:
   free_space_approach:
     condition: pusher_object_distance > 0.18
     select: {k: 4, h: 2}
+  stable_push:
+    condition: otherwise
+    select: {k: 2, h: 1}
+safe_rules:
+  high_risk_contact:
+    condition: contact or pusher_object_distance < 0.18
+    select: {k: 2, h: 1}
+  near_goal_alignment:
+    condition: object_goal_distance < 0.18
+    select: {k: 4, h: 2}
+  free_space_approach:
+    condition: pusher_object_distance > 0.22
+    select: {k: 4, h: 2}
+  negative_progress:
+    condition: recent_progress < -0.002
+    select: {k: 2, h: 1}
   stable_push:
     condition: otherwise
     select: {k: 2, h: 1}

@@ -1,0 +1,25 @@
+{
+  "seed_scores": {
+    "4300000": 1.0,
+    "4300001": 0.9907588419277807,
+    "4300002": 1.0,
+    "4300003": 0.9964738841413612
+  },
+  "summary": {
+    "budget": 12.5,
+    "h": 8,
+    "k": 100,
+    "log_path": "official_reproduction/pusht_official_kh_grid_highB_smoke/k100_h8/eval_log.json",
+    "max_score": 1.0,
+    "max_steps": 300,
+    "mean_score": 0.9968081815172856,
+    "method": "official_fixed_k100_h8",
+    "min_score": 0.9907588419277807,
+    "n_envs": 2,
+    "n_test": 4,
+    "nfe_per_episode": 3800.0,
+    "policy_calls_per_episode": 38.0,
+    "std_score": 0.004362020734242913,
+    "success_rate_095": 1.0
+  }
+}

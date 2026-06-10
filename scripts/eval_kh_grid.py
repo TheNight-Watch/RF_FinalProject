@@ -242,6 +242,31 @@ def joint_scheduler_selector() -> Callable[[PushTSurrogateEnv, Dict[str, float] 
     return select
 
 
+def joint_scheduler_safe_selector() -> Callable[[PushTSurrogateEnv, Dict[str, float] | None], Tuple[int, int, str]]:
+    """Conservative B~=2 scheduler that prioritizes success over mean score.
+
+    It expands the high-risk zone where the controller replans every step, while
+    still using (4,2) in clearly stable approach/alignment phases.
+    """
+
+    def select(env: PushTSurrogateEnv, last: Dict[str, float] | None) -> Tuple[int, int, str]:
+        s = env.state
+        pusher_obj = norm(s.pusher - s.obj)
+        obj_goal = norm(s.goal - s.obj)
+        contact = pusher_obj < env.contact_radius
+        if contact or pusher_obj < 0.18:
+            return 2, 1, "joint_scheduler_safe"
+        if obj_goal < 0.18:
+            return 4, 2, "joint_scheduler_safe"
+        if pusher_obj > 0.22:
+            return 4, 2, "joint_scheduler_safe"
+        if last and last.get("progress", 0.0) < -0.002:
+            return 2, 1, "joint_scheduler_safe"
+        return 2, 1, "joint_scheduler_safe"
+
+    return select
+
+
 def run_episode(
     seed: int,
     selector: Callable[[PushTSurrogateEnv, Dict[str, float] | None], Tuple[int, int, str]],
@@ -308,8 +333,8 @@ def run_episode(
     metrics = EpisodeMetrics(
         method=method_name,
         seed=seed,
-        k=float(avg_k if method_name in {"joint_scheduler", "aac_dvac_h_only"} else call_ks[0]),
-        h=float(avg_h if method_name in {"joint_scheduler", "aac_dvac_h_only"} else call_hs[0]),
+        k=float(avg_k if method_name in {"joint_scheduler", "joint_scheduler_safe", "aac_dvac_h_only"} else call_ks[0]),
+        h=float(avg_h if method_name in {"joint_scheduler", "joint_scheduler_safe", "aac_dvac_h_only"} else call_hs[0]),
         budget=float(call_ks[0] / call_hs[0]) if method_name.startswith("fixed") else avg_budget,
         score=score,
         success=success,
@@ -384,11 +409,14 @@ def run_all(seeds: List[int], episode_steps: int) -> None:
         m, trace = run_episode(seed, joint_scheduler_selector(), episode_steps, save_trace=True)
         rows.append(m)
         trace_rows.extend(trace)
+        m, trace = run_episode(seed, joint_scheduler_safe_selector(), episode_steps, save_trace=True)
+        rows.append(m)
+        trace_rows.extend(trace)
 
     result_dicts = [asdict(r) for r in rows]
     write_csv(RESULTS_DIR / "episode_results.csv", result_dicts)
     write_csv(RESULTS_DIR / "grid_results.csv", [r for r in result_dicts if str(r["method"]).startswith("fixed")])
-    write_csv(RESULTS_DIR / "scheduler_results.csv", [r for r in result_dicts if r["method"] in {"joint_scheduler", "aac_dvac_h_only"}])
+    write_csv(RESULTS_DIR / "scheduler_results.csv", [r for r in result_dicts if r["method"] in {"joint_scheduler", "joint_scheduler_safe", "aac_dvac_h_only"}])
     write_csv(RESULTS_DIR / "summary_results.csv", aggregate(rows))
     write_csv(RAW_DIR / "sample_rollout_traces.csv", trace_rows)
     with (RAW_DIR / "experiment_manifest.json").open("w") as f:

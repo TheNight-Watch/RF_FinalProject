@@ -38,6 +38,8 @@ Official checkpoint: `/root/FinalProject/official_reproduction/data/epoch=0550-t
 Checkpoint size: `1044185793` bytes
 50-seed official PushT mean score: `0.919`
 Official eval log: `/root/FinalProject/official_reproduction/pusht_eval_official_n50_diffusers011/eval_log.json`
+Official fixed `(k,h)` frontier CSV: `/root/FinalProject/results/official_kh_grid_results.csv`
+Best official frontier point: `(k=100, h=8)`, score `0.949`, success `0.950`
 
 Compatibility patches were required for the current Python 3.12 / Gym 0.26 environment: disable shared-memory batching for the custom PushT observation space, restore the old reset return contract, and update Gym vector concatenate argument order.
 

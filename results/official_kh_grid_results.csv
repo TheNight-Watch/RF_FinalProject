@@ -1,0 +1,5 @@
+method,k,h,budget,n_test,n_envs,max_steps,mean_score,std_score,success_rate_095,min_score,max_score,policy_calls_per_episode,nfe_per_episode,log_path
+official_fixed_k12_h1,12,1,12.0,20,5,300,0.10652993045961456,0.1328684910023795,0.0,0.0,0.5032515300644522,300.0,3600.0,official_reproduction/pusht_official_kh_grid_highB_n20/k12_h1/eval_log.json
+official_fixed_k25_h2,25,2,12.5,20,5,300,0.15480444475860594,0.15934720799360516,0.0,0.0,0.4676067189950092,150.0,3750.0,official_reproduction/pusht_official_kh_grid_highB_n20/k25_h2/eval_log.json
+official_fixed_k50_h4,50,4,12.5,20,5,300,0.6531389287361444,0.411571698306154,0.35,0.0,1.0,75.0,3750.0,official_reproduction/pusht_official_kh_grid_highB_n20/k50_h4/eval_log.json
+official_fixed_k100_h8,100,8,12.5,20,5,300,0.9485482200015596,0.17976942506309393,0.95,0.18707851190424016,1.0,38.0,3800.0,official_reproduction/pusht_official_kh_grid_highB_n20/k100_h8/eval_log.json

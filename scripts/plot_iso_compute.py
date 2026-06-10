@@ -57,8 +57,13 @@ def save_iso_curves(summary: pd.DataFrame) -> None:
         for _, row in sub.iterrows():
             ax.annotate(f"({int(row.k_val)},{int(row.h_val)})", (row.h_val, row.score_mean),
                         textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8)
-    joint = summary[summary.method == "joint_scheduler"].iloc[0]
-    ax.scatter([joint.h_mean], [joint.score_mean], s=120, marker="*", color="#d62728", label="Joint scheduler")
+    for method, color, label in [
+        ("joint_scheduler", "#d62728", "Joint scheduler"),
+        ("joint_scheduler_safe", "#7f3c8d", "Safe joint scheduler"),
+    ]:
+        if method in set(summary.method):
+            joint = summary[summary.method == method].iloc[0]
+            ax.scatter([joint.h_mean], [joint.score_mean], s=120, marker="*", color=color, label=label)
     ax.set_xlabel("Execution horizon h")
     ax.set_ylabel("Mean score")
     ax.set_title("Iso-Compute Frontiers: Denoising vs Replanning")
@@ -81,6 +86,7 @@ def save_pareto(summary: pd.DataFrame) -> None:
     for method, color, marker in [
         ("aac_dvac_h_only", "#f58518", "s"),
         ("joint_scheduler", "#d62728", "*"),
+        ("joint_scheduler_safe", "#7f3c8d", "P"),
     ]:
         row = summary[summary.method == method].iloc[0]
         ax.scatter(row.avg_budget_mean, row.score_mean, s=150 if marker == "*" else 90, color=color, marker=marker, label=method)
@@ -96,8 +102,8 @@ def save_pareto(summary: pd.DataFrame) -> None:
 
 
 def save_smoothness(summary: pd.DataFrame) -> None:
-    methods = ["fixed_k2_h1", "fixed_k4_h2", "fixed_k8_h4", "fixed_k16_h8", "aac_dvac_h_only", "joint_scheduler"]
-    labels = ["(2,1)", "(4,2)", "(8,4)", "(16,8)", "h-only", "joint"]
+    methods = ["fixed_k2_h1", "fixed_k4_h2", "fixed_k8_h4", "fixed_k16_h8", "aac_dvac_h_only", "joint_scheduler", "joint_scheduler_safe"]
+    labels = ["(2,1)", "(4,2)", "(8,4)", "(16,8)", "h-only", "joint", "safe"]
     sub = summary.set_index("method").loc[methods]
     x = np.arange(len(methods))
     fig, ax1 = plt.subplots(figsize=(8.2, 4.8))
@@ -124,8 +130,9 @@ def save_main_comparison_bars(summary: pd.DataFrame) -> None:
         "fixed_k4_h2",
         "aac_dvac_h_only",
         "joint_scheduler",
+        "joint_scheduler_safe",
     ]
-    labels = ["default\n(8,4)", "best fixed\n(2,1)", "denoise-only\n(4,2)", "h-only", "joint"]
+    labels = ["default\n(8,4)", "best fixed\n(2,1)", "denoise-only\n(4,2)", "h-only", "joint", "safe\njoint"]
     sub = summary.set_index("method").loc[methods]
     x = np.arange(len(methods))
     fig, axes = plt.subplots(1, 2, figsize=(10.4, 4.2))
@@ -152,8 +159,8 @@ def save_main_comparison_bars(summary: pd.DataFrame) -> None:
 
 
 def save_phase_plot(summary: pd.DataFrame) -> None:
-    methods = ["fixed_k2_h1", "fixed_k4_h2", "fixed_k8_h4", "joint_scheduler"]
-    labels = ["(2,1)", "(4,2)", "(8,4)", "joint"]
+    methods = ["fixed_k2_h1", "fixed_k4_h2", "fixed_k8_h4", "joint_scheduler", "joint_scheduler_safe"]
+    labels = ["(2,1)", "(4,2)", "(8,4)", "joint", "safe"]
     sub = summary.set_index("method").loc[methods]
     phases = ["phase_free_score_mean", "phase_contact_score_mean", "phase_align_score_mean"]
     x = np.arange(len(labels))
@@ -168,6 +175,34 @@ def save_phase_plot(summary: pd.DataFrame) -> None:
     ax.legend()
     fig.tight_layout()
     fig.savefig(FIGURES / "phase_wise_scores.png", dpi=220)
+    plt.close(fig)
+
+
+def save_official_frontier() -> None:
+    path = RESULTS / "official_kh_grid_results.csv"
+    if not path.exists():
+        return
+    df = pd.read_csv(path)
+    if df.empty:
+        return
+    labels = [f"({int(r.k)},{int(r.h)})" for _, r in df.iterrows()]
+    x = np.arange(len(df))
+    fig, ax1 = plt.subplots(figsize=(8.2, 4.6))
+    ax1.bar(x - 0.18, df.mean_score, width=0.36, color="#4c78a8", label="Mean score")
+    ax1.bar(x + 0.18, df.success_rate_095, width=0.36, color="#72b7b2", label="Success >= 0.95")
+    ax1.set_ylim(0, 1.05)
+    ax1.set_xticks(x, labels)
+    ax1.set_ylabel("Official PushT metric")
+    ax1.set_xlabel("(k, h) on high-budget frontier")
+    ax1.set_title("Official Checkpoint Frontier: Denoising Dominates Low-NFE Replanning")
+    ax1.grid(axis="y", alpha=0.2)
+    ax1.legend(loc="upper left")
+    ax2 = ax1.twinx()
+    ax2.plot(x, df.policy_calls_per_episode, color="#f58518", marker="o", label="Policy calls")
+    ax2.set_ylabel("Policy calls per episode")
+    ax2.legend(loc="upper right")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "official_kh_frontier.png", dpi=220)
     plt.close(fig)
 
 
@@ -225,6 +260,7 @@ def main() -> None:
     save_smoothness(summary)
     save_main_comparison_bars(summary)
     save_phase_plot(summary)
+    save_official_frontier()
     save_rollout_video(trace)
     print(f"Wrote figures to {FIGURES}")
 
