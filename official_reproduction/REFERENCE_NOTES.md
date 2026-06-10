@@ -99,3 +99,29 @@ Recorded official fixed-frontier outputs:
 This official checkpoint result is intentionally reported as a supplementary frontier rather than the main
 scheduler-improvement result. It shows that, for the pretrained official checkpoint, low denoising depth cannot
 be compensated by frequent replanning at the tested high-budget frontier.
+
+## DDIM Sampler Replacement Result
+
+After claim-risk review, the final project uses a more defensible improvement idea: replace the official DDPM
+sampler with a DDIM sampler at inference time, without changing model weights or retraining.
+
+Implementation:
+
+- `scripts/run_official_kh_grid.py --sampler ddim`
+- `scripts/analyze_official_sampler_comparison.py`
+- `results/official_sampler_ddim_n20.csv`
+- `results/official_sampler_comparison_summary.csv`
+- `figures/official_sampler_comparison.png`
+
+Formal 20-seed matched official Push-T comparison:
+
+- `(k=25, h=2)`: DDPM score `0.15480444475860594`, DDIM score `0.899804422270664`.
+- `(k=50, h=4)`: DDPM score `0.6531389287361444`, DDIM score `0.9287288429580303`.
+- `(k=100, h=8)`: DDPM score `0.9485482200015596`, DDIM score `0.9001579004758387`.
+
+Conservative claim:
+
+```text
+DDIM sampler replacement improves the official checkpoint's low/mid-denoising inference frontier compared
+with the official DDPM sampler, but it does not universally dominate the high-denoising DDPM baseline.
+```

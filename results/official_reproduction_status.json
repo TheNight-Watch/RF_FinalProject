@@ -180,6 +180,57 @@
     ]
   },
   "official_repo": "https://github.com/real-stanford/diffusion_policy.git",
+  "official_sampler_comparison": {
+    "baseline_sampler": "ddpm",
+    "claim": "DDIM improves official low/mid-denoising settings over DDPM on matched Push-T seeds; DDPM remains strongest at k=100,h=8.",
+    "completed": true,
+    "ddim_results_csv": "/root/FinalProject/results/official_sampler_ddim_n20.csv",
+    "figure": "/root/FinalProject/figures/official_sampler_comparison.png",
+    "improvement_sampler": "ddim",
+    "paired_seed_scores_csv": "/root/FinalProject/results/official_sampler_comparison_seed_scores.csv",
+    "paired_summary_csv": "/root/FinalProject/results/official_sampler_comparison_summary.csv",
+    "results": [
+      {
+        "budget": 12.5,
+        "ddim_mean": 0.899804422270664,
+        "ddim_success_095": 0.8,
+        "ddpm_mean": 0.15480444475860594,
+        "ddpm_success_095": 0.0,
+        "delta_bootstrap_ci_high": 0.8697562438781163,
+        "delta_bootstrap_ci_low": 0.5931668196344141,
+        "delta_mean": 0.7449999775120578,
+        "h": 2,
+        "k": 25,
+        "n_matched": 20
+      },
+      {
+        "budget": 12.5,
+        "ddim_mean": 0.9287288429580303,
+        "ddim_success_095": 0.75,
+        "ddpm_mean": 0.6531389287361444,
+        "ddpm_success_095": 0.35,
+        "delta_bootstrap_ci_high": 0.4880227063331668,
+        "delta_bootstrap_ci_low": 0.05550950276761716,
+        "delta_mean": 0.2755899142218858,
+        "h": 4,
+        "k": 50,
+        "n_matched": 20
+      },
+      {
+        "budget": 12.5,
+        "ddim_mean": 0.9001579004758387,
+        "ddim_success_095": 0.9,
+        "ddpm_mean": 0.9485482200015596,
+        "ddpm_success_095": 0.95,
+        "delta_bootstrap_ci_high": 0.00713542645652473,
+        "delta_bootstrap_ci_low": -0.15238826747784848,
+        "delta_mean": -0.048390319525720954,
+        "h": 8,
+        "k": 100,
+        "n_matched": 20
+      }
+    ]
+  },
   "official_source_archive": "/root/FinalProject/official_reproduction/diffusion_policy_main.tar.gz",
   "official_source_tree": "/root/FinalProject/official_reproduction/diffusion_policy_source",
   "reason": null,

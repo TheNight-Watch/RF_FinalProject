@@ -21,6 +21,7 @@ import dill
 import hydra
 import numpy as np
 import torch
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +52,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-envs", type=int, default=5)
     parser.add_argument("--max-steps", type=int, default=300)
     parser.add_argument("--test-start-seed", type=int, default=4300000)
+    parser.add_argument("--csv-out", type=Path, default=RESULTS / "official_kh_grid_results.csv")
+    parser.add_argument("--sampler", choices=["ddpm", "ddim"], default="ddpm")
     return parser.parse_args()
 
 
@@ -72,6 +75,8 @@ def run_pair(args: argparse.Namespace, k: int, h: int) -> dict:
     workspace = cls(cfg, output_dir=str(out_dir))
     workspace.load_payload(payload, exclude_keys=None, include_keys=None)
     policy = workspace.ema_model if cfg.training.use_ema else workspace.model
+    if args.sampler == "ddim":
+        policy.noise_scheduler = DDIMScheduler.from_config(policy.noise_scheduler.config)
     policy.num_inference_steps = k
     policy.n_action_steps = h
 
@@ -93,7 +98,8 @@ def run_pair(args: argparse.Namespace, k: int, h: int) -> dict:
     }
     scores = np.asarray(list(seed_scores.values()), dtype=np.float64)
     row = {
-        "method": f"official_fixed_k{k}_h{h}",
+        "method": f"official_{args.sampler}_fixed_k{k}_h{h}",
+        "sampler": args.sampler,
         "k": k,
         "h": h,
         "budget": k / h,
@@ -122,7 +128,8 @@ def main() -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
 
     rows = [run_pair(args, k, h) for k, h in args.pairs]
-    out_csv = RESULTS / "official_kh_grid_results.csv"
+    out_csv = args.csv_out
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
     with out_csv.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()

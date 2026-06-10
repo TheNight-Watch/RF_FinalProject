@@ -1,90 +1,114 @@
-# Joint Compute-Control Budgeting for Receding-Horizon Diffusion Policy
+# Official Diffusion Policy Push-T Sampler Improvement
 
-This final project studies the inference-time tradeoff in Diffusion Policy-style receding-horizon control:
+This final project reproduces the official low-dimensional Push-T checkpoint from **Diffusion Policy** and implements a direct inference-time improvement on top of it: replacing the official DDPM ancestral sampler with a plug-and-play DDIM deterministic sampler at evaluation time.
 
-- `k`: denoising steps per policy call.
-- `h`: executed control steps before replanning.
-- `B ~= k / h`: amortized inference budget per control step.
+## What This Project Supports
 
-The reproduction target is **Diffusion Policy: Visuomotor Policy Learning via Action Diffusion** (RSS 2023). The original Stanford/Columbia source and checkpoint are included under `official_reproduction/`, and the official low-dimensional Push-T checkpoint evaluation was executed in this container. The main improvement experiment uses a deterministic Push-T-style closed-loop surrogate benchmark because the proposed contribution changes inference-time allocation variables `(k,h)` that are easier to isolate and sweep reproducibly in a controlled runner.
+- The official low-dimensional Push-T Diffusion Policy checkpoint was loaded and evaluated with the upstream workspace and runner.
+- Fixed `(k,h)` and sampler overrides were tested directly on the official checkpoint, where:
+  - `k` is the number of denoising steps per policy call.
+  - `h` is the number of executed control steps before replanning.
+  - `B ~= k/h` is the nominal amortized inference budget.
+- DDIM substantially improves low/mid-denoising official checkpoint performance over DDPM at matched seeds and matched `(k,h)`.
+- DDPM `(100,8)` remains the strongest tested high-denoising baseline, so the claim is not that DDIM universally dominates every setting.
 
-An official reproduction wrapper is included at `scripts/run_official_pusht_eval.py`. It loads the official checkpoint, instantiates the upstream workspace and PushT keypoints runner, and allows short or 50-seed evaluation overrides. The preferred 50-seed official run used `diffusers==0.11.1` and produced mean score `0.919`. The checkpoint filename reports `test_mean_score=0.969`; the observed gap is recorded as an environment-version reproduction gap because the current container uses Python 3.12, PyTorch 2.7, and Gym 0.26 compatibility patches rather than the original Python 3.9 / PyTorch 1.12 stack.
+## What This Project Does Not Claim
+
+This project no longer claims that its rule-based dynamic scheduler is a novel Diffusion Policy improvement. Related work such as VADF, RA-DP, TIDAL, RTI-DP, and adaptive diffusion replanning already studies closely related adaptive inference, replanning, and scheduling ideas.
+
+The local surrogate scheduler result is retained only as a synthetic diagnostic. It is not independent evidence that the official checkpoint improves under dynamic scheduling.
+
+See [claim_risk_audit_zh.md](/root/FinalProject/artifacts/logs/claim_risk_audit_zh.md) for the stop-loss review.
 
 ## Official Push-T Reproduction
 
 - Source tree: `official_reproduction/diffusion_policy_source`
 - Checkpoint: `official_reproduction/data/epoch=0550-test_mean_score=0.969.ckpt`
-- Checkpoint size: `1044185793` bytes.
-- 4-seed smoke score: `0.997`.
-- 50-seed score: `0.919`.
-- 50-seed log: `/root/FinalProject/official_reproduction/pusht_eval_official_n50_diffusers011/eval_log.json`.
-- Compatibility patches: `shared_memory=False`, Gym reset wrapper, Gym vector concatenate argument order.
+- Checkpoint size: `1044185793` bytes
+- 50-seed official runner score: `0.9186505414953691`
+- 50-seed log: `official_reproduction/pusht_eval_official_n50_diffusers011/eval_log.json`
 
-## Official `(k,h)` Frontier Check
+The checkpoint filename reports `test_mean_score=0.969`. The local score gap is recorded as an environment-version reproduction gap because this container uses Python 3.12, PyTorch 2.7, and Gym 0.26 compatibility patches rather than the original Python 3.9 / PyTorch 1.12 stack.
 
-The optimized project also runs fixed `(k,h)` overrides directly through the official checkpoint with `scripts/run_official_kh_grid.py`. On a 20-seed high-budget frontier, the best tested official point is `(k=100, h=8)`, with mean score `0.949`, success `0.950`, and `38.0` policy calls per episode. Lower-denoising points on the same high-budget family fail sharply, so the official checkpoint evidence is that denoising depth remains critical for this pretrained model.
+## Main Improvement Result
 
-## Near-Official LeRobot Reproduction
+Matched 20-seed official checkpoint comparison:
 
-- Model: `lerobot/diffusion_pusht`.
-- HF model-card 500-episode evaluation: average max reward `0.955`, success `65.4%`.
-- Model-card comparison to the original Diffusion Policy repository: average max reward `0.957`, success `64.2%`.
-- Local checkpoint status: `1002.2` MiB safetensors file downloaded through `hf-mirror.com`, safetensors structure verified, LeRobot `DiffusionPolicy` loaded with 262.7M parameters, real `gym-pusht` environment smoke tested.
-- Local rollout smoke test: 1 episode, 300 steps, `100` denoising steps, max reward `0.627`, success rate `0.000`.
+| `(k,h)` | DDPM Score | DDIM Score | Score Delta | DDPM Success | DDIM Success |
+|---|---:|---:|---:|---:|---:|
+| `(25,2)` | 0.155 | 0.900 | +0.745 | 0.000 | 0.800 |
+| `(50,4)` | 0.653 | 0.929 | +0.276 | 0.350 | 0.750 |
+| `(100,8)` | 0.949 | 0.900 | -0.048 | 0.950 | 0.900 |
 
-Important caveat: the mirror-assembled safetensors file loads and runs, but its SHA did not match the HF LFS metadata. Therefore the HF model-card metrics are treated as the near-official benchmark reference, and the local rollout is reported as an executable smoke test.
+Paired bootstrap 95% confidence intervals for score deltas:
 
-## Main Result
+- `(25,2)`: `[+0.593, +0.870]`
+- `(50,4)`: `[+0.056, +0.488]`
+- `(100,8)`: `[-0.152, +0.007]`
 
-On the `B ~= 2` frontier with 20 matched seeds:
+Interpretation: DDIM is a strong plug-and-play improvement for low/mid-denoising official checkpoint settings, but the original DDPM sampler remains best at `(100,8)` in this test.
 
-- Best fixed score baseline `(k=2, h=1)`: score `0.871`, success `0.900`, policy calls `120.0`, smoothness cost `0.420`.
-- Score-oriented joint scheduler: score `0.893`, success `0.850`, policy calls `89.2`, smoothness cost `0.257`.
-- Safe joint scheduler: score `0.863`, success `0.950`, policy calls `105.3`, smoothness cost `0.340`.
+## Official DDPM Fixed Frontier
 
-The two scheduler variants expose a Pareto tradeoff. The score-oriented scheduler improves mean score while reducing calls and action roughness; the safe scheduler improves success rate while still reducing calls and smoothness cost relative to the best fixed score baseline.
+Official checkpoint fixed `(k,h)` frontier, 20 seeds:
 
-## Reproduce
+| Official `(k,h)` | Nominal `B=k/h` | Score | Success | Policy Calls |
+|---|---:|---:|---:|---:|
+| `(12,1)` | 12.0 | 0.107 | 0.000 | 300.0 |
+| `(25,2)` | 12.5 | 0.155 | 0.000 | 150.0 |
+| `(50,4)` | 12.5 | 0.653 | 0.350 | 75.0 |
+| `(100,8)` | 12.5 | 0.949 | 0.950 | 38.0 |
 
-```bash
-cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache python scripts/eval_kh_grid.py --seeds 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 --episode-steps 120
-python scripts/plot_iso_compute.py
-python scripts/generate_deliverables.py
-```
+Interpretation before sampler replacement: equal or similar nominal compute budgets are not interchangeable for the official checkpoint. Under DDPM, allocating compute toward denoising depth is much more important than frequent replanning in this tested high-budget family.
 
-Official checkpoint evaluation path, for a network-stable run:
+## Synthetic Diagnostic
 
-```bash
-cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache   /root/FinalProject/.venv_official/bin/python scripts/run_official_pusht_eval.py   --output-dir official_reproduction/pusht_eval_official_n50_diffusers011   --n-test 50 --n-envs 5 --n-test-vis 0 --max-steps 300
-```
+The project also contains a local Push-T-style surrogate with rule-based schedulers:
 
-Official fixed `(k,h)` frontier:
+- `joint_scheduler`
+- `joint_scheduler_safe`
 
-```bash
-cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache   /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py   --output-root official_reproduction/pusht_official_kh_grid_highB_n20   --n-test 20 --n-envs 5 --pairs 12,1 25,2 50,4 100,8
-```
+Those results are not used as official Diffusion Policy evidence. The surrogate hand-designs denoising residuals, mode bias, and stale-plan effects, so it cannot independently validate the scheduler claim.
 
-## Outputs
+## Key Files
 
-- Raw and summarized results: `results/`
-- Figures: `figures/`
-- Main comparison bar plot: `figures/main_comparison_bars.png`
-- Rollout animation: `artifacts/videos/joint_scheduler_rollout.gif`
-- Environment log: `artifacts/logs/environment_log.md`
+- Official eval wrapper: `scripts/run_official_pusht_eval.py`
+- Official fixed frontier runner: `scripts/run_official_kh_grid.py`
+- Official frontier CSV: `results/official_kh_grid_results.csv`
+- Official frontier figure: `figures/official_kh_frontier.png`
+- Official sampler comparison summary: `results/official_sampler_comparison_summary.csv`
+- Official sampler comparison figure: `figures/official_sampler_comparison.png`
+- Claim-risk audit: `artifacts/logs/claim_risk_audit_zh.md`
 - Completion audit: `artifacts/logs/completion_audit.md`
-- Official reproduction status: `results/official_reproduction_status.json`
-- Official `(k,h)` frontier: `results/official_kh_grid_results.csv` and `figures/official_kh_frontier.png`
-- Official fixed `(k,h)` runner: `scripts/run_official_kh_grid.py`
-- Official checkpoint eval wrapper: `scripts/run_official_pusht_eval.py`
-- Official reference notes: `official_reproduction/REFERENCE_NOTES.md`
-- LeRobot PushT smoke results: `results/lerobot_pusht_smoke_summary.json` and `results/lerobot_pusht_smoke_results.csv`
-- LeRobot PushT smoke video: `artifacts/videos/lerobot_pusht_episode_00.gif`
-- Final report: `report/final_report.pdf` and `report/final_report.md`
-- Slides: `slides/final_presentation.pptx` and `slides/final_presentation.pdf`
+- Chinese report: `report/final_report_zh.md`
+- English report: `report/final_report.md`
 
-## Important Limitation
+## Reproduce Official Frontier
 
-The scheduler-improvement numbers are from the local Push-T-style surrogate, not official Diffusion Policy checkpoint rollouts. The report states this explicitly and frames the result as a reproducible inference-time analysis layer built on top of an official Push-T checkpoint reproduction.
+```bash
+cd /root/FinalProject
+CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
+  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
+  --output-root official_reproduction/pusht_official_kh_grid_highB_n20 \
+  --n-test 20 --n-envs 5 --pairs 12,1 25,2 50,4 100,8
+```
+
+## Reproduce DDIM Improvement
+
+```bash
+cd /root/FinalProject
+CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
+  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
+  --sampler ddim \
+  --output-root official_reproduction/pusht_official_sampler_ddim_n20 \
+  --csv-out results/official_sampler_ddim_n20.csv \
+  --n-test 20 --n-envs 5 --pairs 25,2 50,4 100,8
+
+python scripts/analyze_official_sampler_comparison.py
+```
+
+## Conservative Final Claim
+
+The defensible final claim is:
+
+> This project reproduces the official Diffusion Policy Push-T checkpoint and implements a plug-and-play DDIM sampler replacement. On matched official Push-T seeds, DDIM dramatically improves low/mid-denoising settings over the official DDPM sampler, while the original high-denoising DDPM baseline remains strongest at `(100,8)`.

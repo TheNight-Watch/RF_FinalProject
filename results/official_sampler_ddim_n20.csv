@@ -1,0 +1,4 @@
+method,sampler,k,h,budget,n_test,n_envs,max_steps,mean_score,std_score,success_rate_095,min_score,max_score,policy_calls_per_episode,nfe_per_episode,log_path
+official_ddim_fixed_k25_h2,ddim,25,2,12.5,20,5,300,0.899804422270664,0.25873703513114676,0.8,0.045127646075307386,1.0,150.0,3750.0,official_reproduction/pusht_official_sampler_ddim_n20/k25_h2/eval_log.json
+official_ddim_fixed_k50_h4,ddim,50,4,12.5,20,5,300,0.9287288429580303,0.22102744863417018,0.75,0.0,1.0,75.0,3750.0,official_reproduction/pusht_official_sampler_ddim_n20/k50_h4/eval_log.json
+official_ddim_fixed_k100_h8,ddim,100,8,12.5,20,5,300,0.9001579004758387,0.2776591976055042,0.9,0.0,1.0,38.0,3800.0,official_reproduction/pusht_official_sampler_ddim_n20/k100_h8/eval_log.json
