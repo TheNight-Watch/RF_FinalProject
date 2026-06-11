@@ -6,7 +6,7 @@
 \usepackage{booktabs}
 \usepackage{amsmath}
 
-\title{Plug-and-Play DDIM Sampler Improvement for Official Diffusion Policy Push-T}
+\title{Mask-Aware Temporal Keypoint Imputation for Robust Low-Dimensional Diffusion Policy Push-T}
 \author{
   Final Project Report\\
   Robotics Final Project\\
@@ -16,75 +16,103 @@
 \maketitle
 
 \begin{abstract}
-This project reproduces the official low-dimensional Push-T checkpoint from Diffusion Policy and implements a direct inference-time improvement: replacing the official DDPM ancestral sampler with a DDIM deterministic sampler. The official checkpoint is evaluated with matched Push-T seeds under fixed $(k,h)$ settings, where $k$ is the number of denoising steps and $h$ is the number of executed control steps before replanning. DDIM dramatically improves low/mid-denoising official settings: at $(25,2)$, score improves from 0.155 to 0.900; at $(50,4)$, score improves from 0.653 to 0.929. The claim is carefully bounded: DDIM does not dominate the strongest tested DDPM high-denoising baseline $(100,8)$, which remains at score 0.949.
+This project reproduces the official low-dimensional Push-T checkpoint from Diffusion Policy and studies a deployment failure mode that is not handled by the original low-dimensional policy interface. The Push-T keypoint runner exposes both keypoint coordinates and a visibility mask, but the low-dimensional policy only consumes the coordinate vector. In a realistic detector-style deployment, invisible keypoints may be missing or zero-filled before policy inference, creating out-of-distribution observations for a checkpoint trained on fully visible keypoints. We implement a training-free, mask-aware observation wrapper that imputes masked keypoints before normalization and policy inference. On the official checkpoint with 20 matched Push-T seeds, per-keypoint temporal imputation substantially improves robustness under synthetic keypoint dropout. At 50\% keypoint visibility, zero-fill obtains score 0.177 and no successes, while carry-forward reaches 0.901 score and 0.75 success and linear extrapolation reaches 0.875 score and 0.85 success. At 25\% visibility, linear extrapolation improves score from 0.134 to 0.668. The contribution is intentionally bounded: this is a low-dimensional Push-T deployment wrapper, not a general visual Diffusion Policy algorithm.
 \end{abstract}
 
-\keywords{Diffusion Policy, Push-T, DDIM, sampler replacement, robot learning}
+\keywords{Diffusion Policy, Push-T, keypoint occlusion, imputation, robot learning}
 
 \section{Introduction}
 
-Diffusion Policy~\citep{chi2023diffusion} generates action chunks through iterative denoising and deploys them in a receding-horizon control loop. Its inference behavior depends on the sampler and the deployment parameters: denoising steps $k$ and executed action horizon $h$. The original official Push-T checkpoint uses a DDPM scheduler. A natural improvement idea is to swap the sampler at inference time, without retraining, using DDIM~\citep{song2021ddim}.
+Diffusion Policy~\citep{chi2023diffusion} models robot actions as denoised action chunks and has become a common baseline for visuomotor imitation learning. The official Push-T low-dimensional setting uses nine block keypoints and the agent position as observations. The official keypoint environment also produces a keypoint visibility mask, but the low-dimensional policy interface normalizes and consumes only \texttt{obs\_dict["obs"]}. Thus, the default deployment path discards visibility information before the policy can use it.
 
-This is not claimed as a new diffusion-model algorithm. The contribution is an official-checkpoint validation of a plug-and-play sampler replacement on Push-T.
+This project started from the official Push-T checkpoint reproduction and searched for an improvement that could be validated directly on the official checkpoint. Earlier scheduler and DDIM directions were downgraded after review: the scheduler result relied on a hand-designed surrogate, and DDIM is already an established sampler. The final contribution is instead a narrow deployment robustness improvement:
+\begin{quote}
+We identify a mask-handling failure mode in the official low-dimensional Push-T Diffusion Policy deployment path and show that a training-free, mask-aware temporal observation wrapper substantially improves robustness under detector-style keypoint dropout.
+\end{quote}
 
-\section{Related Work and Claim Boundary}
+\section{Source Audit and Problem Setting}
 
-Diffusion Policy introduced action diffusion for visuomotor policy learning~\citep{chi2023diffusion}. DDIM introduced deterministic non-Markovian diffusion sampling~\citep{song2021ddim}. Recent robotics work such as VADF, RA-DP, TIDAL, RTI-DP, and adaptive diffusion replanning already studies adaptive scheduling, replanning, and inference-time compute allocation~\citep{vadf2026,radp2025,tidal2026,rtidp2025,replanning2023}.
+The source audit is central to the claim boundary. In the official low-dimensional policy, \texttt{predict\_action} normalizes only \texttt{obs\_dict["obs"]}. The Push-T keypoint runner constructs both fields:
+\begin{verbatim}
+'obs': obs[...,:self.n_obs_steps,:Do]
+'obs_mask': obs[...,:self.n_obs_steps,Do:] > 0.5
+\end{verbatim}
+but the policy never reads \texttt{obs\_mask}. The environment samples keypoint visibility using \texttt{keypoint\_visible\_rate}; however, its low-dimensional observation still stores the true keypoint coordinates, while the zeroed visible-keypoint copy is used for rendering. Therefore, to evaluate detector-style occlusion, we explicitly zero masked keypoint coordinates before policy inference and then compare imputation strategies.
 
-Therefore, this project does not claim a new scheduling algorithm. The supported improvement is narrower and directly tested: using DDIM instead of the official DDPM sampler for the public Diffusion Policy Push-T checkpoint.
-
-\section{Official Reproduction}
-
-The official source was acquired through the GitHub codeload archive after repeated clone instability. The checkpoint was downloaded from the Diffusion Policy project server. The preferred 50-seed official DDPM run used official-era \texttt{diffusers==0.11.1} and produced mean score 0.9187. The checkpoint filename reports 0.969, so the remaining gap is reported as an environment-version reproduction gap.
+The training pipeline further supports this interpretation. The low-dimensional dataset reads \texttt{keypoint}, \texttt{state}, and \texttt{action} from the replay buffer and concatenates keypoints with agent position. It has no mask channel and no keypoint dropout augmentation. The official training configuration sets \texttt{keypoint\_visible\_rate: 1.0}. Thus, the checkpoint is trained on full keypoint observations; zero-filled detector dropout is an out-of-distribution deployment input, not a condition the policy was trained to handle.
 
 \section{Method}
 
-The official policy object exposes a \texttt{noise\_scheduler}. The improvement replaces the default DDPM scheduler with:
+We implement a lightweight \texttt{DeploymentWrapper} around the loaded official policy. The wrapper changes only the observation passed into \texttt{predict\_action}; it does not change the checkpoint weights, normalizer, sampler, action horizon, or environment dynamics. Imputation is performed in the original Push-T coordinate space before the policy normalizer.
 
-\begin{verbatim}
-DDIMScheduler.from_config(
-    policy.noise_scheduler.config)
-\end{verbatim}
+Let $x_{t,j}$ be a keypoint coordinate and $m_{t,j}$ its visibility mask. If $m_{t,j}=1$, the true coordinate is used. If $m_{t,j}=0$, we evaluate:
+\begin{itemize}
+\item \textbf{zero-fill}: pass zeroed masked coordinates directly;
+\item \textbf{mean prior}: fill with the checkpoint normalizer's training mean for that coordinate;
+\item \textbf{frame hold}: use the most recent fully visible keypoint frame, otherwise the mean prior;
+\item \textbf{carry-forward}: for each coordinate independently, use the most recent visible value, otherwise the mean prior;
+\item \textbf{linear}: for each coordinate independently, extrapolate from the two most recent visible values, clamp to $[0,512]$, otherwise fall back to carry-forward or the mean prior;
+\item \textbf{oracle}: retain true coordinates despite the mask; this is an upper bound, not deployable.
+\end{itemize}
 
-The model weights, normalizer, observation history, action horizon, and environment runner are unchanged. The evaluation script is \texttt{scripts/run\_official\_kh\_grid.py --sampler ddim}. Matched seed analysis is performed by \texttt{scripts/analyze\_official\_sampler\_comparison.py}.
+The per-coordinate history is reset at episode start. If a coordinate is invisible before any observation has been seen, the fallback is the training mean, not zero.
+
+\section{Experimental Setup}
+
+Experiments use the official low-dimensional Push-T checkpoint, the official keypoint runner, DDIM inference with $(k,h)=(100,8)$, 20 matched test seeds, and two synthetic visibility rates: 50\% and 25\%. The visibility masks are produced by the seeded environment and the same seed set is used for every imputation method. We report mean Push-T score, success rate at score $\geq 0.95$, and paired bootstrap confidence intervals over matched seeds.
+
+The current evaluation uses the official iid per-keypoint visibility mask. This is a favorable setting for temporal imputation because a missing keypoint is often visible again soon. Continuous occlusion is left as a limitation and future experiment.
 
 \section{Results}
 
 \begin{table}[t]
 \centering
-\caption{Matched 20-seed official Push-T comparison.}
+\caption{Official checkpoint results under detector-style masked keypoint dropout. Each entry reports mean score and success rate over 20 matched seeds.}
 \begin{tabular}{lrrrr}
 \toprule
-$(k,h)$ & DDPM & DDIM & $\Delta$ & Success $\Delta$ \\
+Visibility & Method & Score & Success & $\Delta$ vs. zero \\
 \midrule
-$(25,2)$ & 0.155 & 0.900 & +0.745 & +0.800 \\
-$(50,4)$ & 0.653 & 0.929 & +0.276 & +0.400 \\
-$(100,8)$ & 0.949 & 0.900 & -0.048 & -0.050 \\
+50\% & zero-fill & 0.177 & 0.00 & 0.000 \\
+50\% & mean prior & 0.405 & 0.25 & +0.228 \\
+50\% & frame hold & 0.403 & 0.20 & +0.226 \\
+50\% & carry-forward & 0.901 & 0.75 & +0.725 \\
+50\% & linear & 0.875 & 0.85 & +0.698 \\
+50\% & oracle & 0.900 & 0.90 & +0.723 \\
+\midrule
+25\% & zero-fill & 0.134 & 0.00 & 0.000 \\
+25\% & mean prior & 0.257 & 0.00 & +0.123 \\
+25\% & frame hold & 0.257 & 0.00 & +0.123 \\
+25\% & carry-forward & 0.575 & 0.20 & +0.440 \\
+25\% & linear & 0.668 & 0.35 & +0.533 \\
+25\% & oracle & 0.900 & 0.90 & +0.766 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Paired bootstrap 95\% confidence intervals for score deltas are $[0.593, 0.870]$ for $(25,2)$, $[0.056, 0.488]$ for $(50,4)$, and $[-0.152, 0.007]$ for $(100,8)$.
-
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\linewidth]{../figures/official_sampler_comparison.png}
-\caption{Plug-and-play DDIM replacement improves low/mid-denoising official checkpoint settings but does not dominate the high-denoising DDPM baseline.}
+\includegraphics[width=0.98\linewidth]{../figures/official_occluded_imputation_all.png}
+\caption{Mask-aware temporal imputation substantially improves official Push-T checkpoint robustness under masked keypoint dropout. Oracle is an upper bound and not deployable.}
 \end{figure}
+
+Paired bootstrap intervals confirm that temporal imputation improves over zero-fill. At 50\% visibility, carry-forward improves score by +0.725 with 95\% CI $[+0.586,+0.846]$, and linear improves score by +0.698 with CI $[+0.544,+0.835]$. At 25\% visibility, carry-forward improves by +0.440 with CI $[+0.290,+0.587]$, and linear improves by +0.533 with CI $[+0.378,+0.685]$.
+
+Linear extrapolation has higher mean score and success than carry-forward at 25\% visibility, but the paired difference is not statistically conclusive in this 20-seed evaluation: score delta is +0.093 with CI $[-0.125,+0.305]$, and success delta is +0.15 with CI $[-0.10,+0.40]$. Therefore, we report it as a trend rather than a strict dominance claim.
 
 \section{Discussion}
 
-DDIM is a strong improvement for low/mid-denoising official checkpoint settings. At $(25,2)$, DDPM nearly fails, while DDIM reaches success 0.800. At $(50,4)$, DDIM nearly matches the high-denoising DDPM baseline in mean score while improving success from 0.350 to 0.750. However, DDIM is not universally better: at $(100,8)$, DDPM remains stronger in this experiment.
+The result is not merely ``do not feed zeros.'' Mean-prior and full-frame-hold baselines improve over zero-fill but remain far below per-keypoint temporal methods. This suggests that preserving recent per-keypoint geometry is the useful signal. At 50\% visibility, temporal imputation nearly reaches the oracle upper bound. At 25\% visibility, it recovers a large fraction of performance but remains below oracle, so severe occlusion is not solved.
+
+The most defensible contribution is the combination of source-level failure identification and official-checkpoint evaluation. The project does not claim to invent imputation, improve clean full-observation performance, or solve visual occlusion. It shows that the official low-dimensional deployment path discards mask information and that a simple no-retraining wrapper can make this setting much more robust.
 
 \section{Limitations}
 
-The official reproduction uses a compatibility environment rather than the original Python 3.9 / PyTorch 1.12 / Gym 0.21 stack. The DDIM comparison is limited to three high-budget $(k,h)$ settings. Runtime wall-clock speed was not benchmarked separately; NFE is used as the compute proxy. DDIM is an established sampler, so the contribution is application and validation on the reproduced official checkpoint.
+First, the occlusion model is iid per-keypoint dropout from the official environment mask. Real keypoint detectors often fail with temporally correlated occlusion, so continuous dropout should be evaluated before claiming real-world robustness. Second, the experiment is specific to low-dimensional Push-T keypoints and does not directly transfer to RGB Diffusion Policy. Third, oracle performance shows that 25\% visibility still has substantial headroom. Fourth, the official reproduction runs in a compatibility environment rather than the exact original training stack.
 
 \section{Conclusion}
 
-The final project has a defensible improvement result. Starting from an official Diffusion Policy Push-T reproduction, it implements a plug-and-play DDIM sampler replacement and validates it on official checkpoint rollouts. DDIM substantially improves low/mid-denoising settings over the official DDPM sampler on matched seeds, while the original high-denoising DDPM baseline remains strongest.
+This project reproduces the official Diffusion Policy Push-T checkpoint and implements a focused inference-time improvement. The final contribution is a training-free, mask-aware temporal observation wrapper for low-dimensional keypoint dropout. On official checkpoint rollouts with matched seeds, per-keypoint temporal imputation substantially improves robustness over zero-fill, mean-prior fill, and full-frame hold baselines. The claim is narrow but defensible and directly supported by official-checkpoint experiments.
 
-% The CoRL style selects the bibliography style automatically.
 \bibliography{corl_references}
 
 \end{document}

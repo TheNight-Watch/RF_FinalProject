@@ -1,114 +1,154 @@
-# Official Diffusion Policy Push-T Sampler Improvement
+# Mask-Aware Temporal Keypoint Imputation for Diffusion Policy Push-T
 
-This final project reproduces the official low-dimensional Push-T checkpoint from **Diffusion Policy** and implements a direct inference-time improvement on top of it: replacing the official DDPM ancestral sampler with a plug-and-play DDIM deterministic sampler at evaluation time.
+This final project reproduces the official low-dimensional Push-T checkpoint from **Diffusion Policy** and implements a training-free deployment improvement: a mask-aware temporal observation wrapper for keypoint dropout.
 
-## What This Project Supports
+## Final Claim
 
-- The official low-dimensional Push-T Diffusion Policy checkpoint was loaded and evaluated with the upstream workspace and runner.
-- Fixed `(k,h)` and sampler overrides were tested directly on the official checkpoint, where:
-  - `k` is the number of denoising steps per policy call.
-  - `h` is the number of executed control steps before replanning.
-  - `B ~= k/h` is the nominal amortized inference budget.
-- DDIM substantially improves low/mid-denoising official checkpoint performance over DDPM at matched seeds and matched `(k,h)`.
-- DDPM `(100,8)` remains the strongest tested high-denoising baseline, so the claim is not that DDIM universally dominates every setting.
+The supported claim is narrow:
 
-## What This Project Does Not Claim
+> We identify a mask-handling failure mode in the official low-dimensional Push-T Diffusion Policy deployment path and show that a training-free, mask-aware temporal observation wrapper substantially improves robustness under detector-style keypoint dropout.
 
-This project no longer claims that its rule-based dynamic scheduler is a novel Diffusion Policy improvement. Related work such as VADF, RA-DP, TIDAL, RTI-DP, and adaptive diffusion replanning already studies closely related adaptive inference, replanning, and scheduling ideas.
+This project does **not** claim a new general imputation algorithm, clean full-observation improvement, or visual Diffusion Policy occlusion robustness.
 
-The local surrogate scheduler result is retained only as a synthetic diagnostic. It is not independent evidence that the official checkpoint improves under dynamic scheduling.
+## Why This Is the Main Contribution
 
-See [claim_risk_audit_zh.md](/root/FinalProject/artifacts/logs/claim_risk_audit_zh.md) for the stop-loss review.
+The official Push-T keypoint runner constructs both coordinates and masks:
 
-## Official Push-T Reproduction
+```python
+"obs": obs[..., :self.n_obs_steps, :Do]
+"obs_mask": obs[..., :self.n_obs_steps, Do:] > 0.5
+```
 
-- Source tree: `official_reproduction/diffusion_policy_source`
-- Checkpoint: `official_reproduction/data/epoch=0550-test_mean_score=0.969.ckpt`
-- Checkpoint size: `1044185793` bytes
-- 50-seed official runner score: `0.9186505414953691`
-- 50-seed log: `official_reproduction/pusht_eval_official_n50_diffusers011/eval_log.json`
+The low-dimensional policy consumes only `obs_dict["obs"]`; it does not use `obs_mask`. The training dataset also has no mask channel or keypoint dropout augmentation, and the low-dimensional training configuration uses `keypoint_visible_rate: 1.0`.
 
-The checkpoint filename reports `test_mean_score=0.969`. The local score gap is recorded as an environment-version reproduction gap because this container uses Python 3.12, PyTorch 2.7, and Gym 0.26 compatibility patches rather than the original Python 3.9 / PyTorch 1.12 stack.
+Therefore, detector-style missing keypoints that are zero-filled at deployment become out-of-distribution observations. The project evaluates whether simple mask-aware imputation can repair that deployment failure without retraining.
 
-## Main Improvement Result
+## Main Results
 
-Matched 20-seed official checkpoint comparison:
+Official low-dimensional Push-T checkpoint, DDIM `(k,h)=(100,8)`, 20 matched seeds:
 
-| `(k,h)` | DDPM Score | DDIM Score | Score Delta | DDPM Success | DDIM Success |
-|---|---:|---:|---:|---:|---:|
-| `(25,2)` | 0.155 | 0.900 | +0.745 | 0.000 | 0.800 |
-| `(50,4)` | 0.653 | 0.929 | +0.276 | 0.350 | 0.750 |
-| `(100,8)` | 0.949 | 0.900 | -0.048 | 0.950 | 0.900 |
+| visible rate | method | score | success >=0.95 | delta vs zero | 95% CI |
+|---:|---|---:|---:|---:|---:|
+| 50% | zero-fill | 0.177 | 0.00 | 0.000 | - |
+| 50% | mean prior | 0.405 | 0.25 | +0.228 | [+0.058, +0.405] |
+| 50% | frame hold | 0.403 | 0.20 | +0.226 | [+0.060, +0.404] |
+| 50% | carry-forward | 0.901 | 0.75 | +0.725 | [+0.586, +0.846] |
+| 50% | linear | 0.875 | 0.85 | +0.698 | [+0.544, +0.835] |
+| 50% | oracle | 0.900 | 0.90 | +0.723 | [+0.571, +0.854] |
+| 25% | zero-fill | 0.134 | 0.00 | 0.000 | - |
+| 25% | mean prior | 0.257 | 0.00 | +0.123 | [+0.041, +0.214] |
+| 25% | frame hold | 0.257 | 0.00 | +0.123 | [+0.040, +0.216] |
+| 25% | carry-forward | 0.575 | 0.20 | +0.440 | [+0.290, +0.587] |
+| 25% | linear | 0.668 | 0.35 | +0.533 | [+0.378, +0.685] |
+| 25% | oracle | 0.900 | 0.90 | +0.766 | [+0.627, +0.881] |
 
-Paired bootstrap 95% confidence intervals for score deltas:
-
-- `(25,2)`: `[+0.593, +0.870]`
-- `(50,4)`: `[+0.056, +0.488]`
-- `(100,8)`: `[-0.152, +0.007]`
-
-Interpretation: DDIM is a strong plug-and-play improvement for low/mid-denoising official checkpoint settings, but the original DDPM sampler remains best at `(100,8)` in this test.
-
-## Official DDPM Fixed Frontier
-
-Official checkpoint fixed `(k,h)` frontier, 20 seeds:
-
-| Official `(k,h)` | Nominal `B=k/h` | Score | Success | Policy Calls |
-|---|---:|---:|---:|---:|
-| `(12,1)` | 12.0 | 0.107 | 0.000 | 300.0 |
-| `(25,2)` | 12.5 | 0.155 | 0.000 | 150.0 |
-| `(50,4)` | 12.5 | 0.653 | 0.350 | 75.0 |
-| `(100,8)` | 12.5 | 0.949 | 0.950 | 38.0 |
-
-Interpretation before sampler replacement: equal or similar nominal compute budgets are not interchangeable for the official checkpoint. Under DDPM, allocating compute toward denoising depth is much more important than frequent replanning in this tested high-budget family.
-
-## Synthetic Diagnostic
-
-The project also contains a local Push-T-style surrogate with rule-based schedulers:
-
-- `joint_scheduler`
-- `joint_scheduler_safe`
-
-Those results are not used as official Diffusion Policy evidence. The surrogate hand-designs denoising residuals, mode bias, and stale-plan effects, so it cannot independently validate the scheduler claim.
+Interpretation: per-keypoint temporal imputation, especially carry-forward and linear extrapolation, substantially improves robustness over zero-fill, mean-prior fill, and full-frame hold. The oracle row is an upper bound and is not deployable.
 
 ## Key Files
 
-- Official eval wrapper: `scripts/run_official_pusht_eval.py`
-- Official fixed frontier runner: `scripts/run_official_kh_grid.py`
-- Official frontier CSV: `results/official_kh_grid_results.csv`
-- Official frontier figure: `figures/official_kh_frontier.png`
-- Official sampler comparison summary: `results/official_sampler_comparison_summary.csv`
-- Official sampler comparison figure: `figures/official_sampler_comparison.png`
-- Claim-risk audit: `artifacts/logs/claim_risk_audit_zh.md`
-- Completion audit: `artifacts/logs/completion_audit.md`
+- English CoRL-style report: `report/corl_final_report.pdf`
+- English report source: `report/corl_final_report.tex`
 - Chinese report: `report/final_report_zh.md`
-- English report: `report/final_report.md`
+- English Markdown report: `report/final_report.md`
+- Evaluation runner: `scripts/run_official_kh_grid.py`
+- Occlusion analysis: `scripts/analyze_occluded_imputation.py`
+- Main summary CSV: `results/official_occluded_imputation_all_summary.csv`
+- Main figure: `figures/official_occluded_imputation_all.png`
+- Innovation and claim audit: `artifacts/logs/innovation_search_audit_zh.md`
 
-## Reproduce Official Frontier
+## Notes for Claude to Build the PPT
+
+Read these files first:
+
+1. `report/corl_final_report.pdf`  
+   Final English CoRL-style report. Use this as the authoritative narrative.
+2. `report/final_report_zh.md`  
+   Chinese explanation with defense wording and likely Q&A.
+3. `results/official_occluded_imputation_all_summary.csv`  
+   Main result table with all imputation baselines and paired bootstrap intervals.
+4. `figures/official_occluded_imputation_all.png`  
+   Main figure for slides.
+5. `artifacts/logs/innovation_search_audit_zh.md`  
+   Audit trail explaining why scheduler/DDIM were downgraded and why this claim is safer.
+6. `scripts/run_official_kh_grid.py` and `scripts/analyze_occluded_imputation.py`  
+   Implementation and analysis details, only if code-level verification is needed.
+
+Suggested PPT storyline:
+
+1. Reproduce: official low-dimensional Push-T Diffusion Policy checkpoint is loaded and evaluated.
+2. Source audit: runner provides `obs_mask`, but low-dimensional policy inference uses only `obs_dict["obs"]`.
+3. Failure mode: detector-style keypoint dropout with zero-filled missing keypoints causes severe OOD observations.
+4. Improvement: a training-free mask-aware temporal observation wrapper imputes missing keypoints before normalization.
+5. Baselines: zero-fill, mean prior, frame hold, carry-forward, linear extrapolation, oracle upper bound.
+6. Results: temporal per-keypoint imputation substantially improves robustness on 20 matched official seeds.
+7. Limitations: iid keypoint dropout only; continuous occlusion and RGB policy robustness are future work.
+
+Key numbers for slides:
+
+| visible rate | zero-fill | mean prior | frame hold | carry-forward | linear | oracle |
+|---:|---:|---:|---:|---:|---:|---:|
+| 50% | 0.177 / 0.00 | 0.405 / 0.25 | 0.403 / 0.20 | 0.901 / 0.75 | 0.875 / 0.85 | 0.900 / 0.90 |
+| 25% | 0.134 / 0.00 | 0.257 / 0.00 | 0.257 / 0.00 | 0.575 / 0.20 | 0.668 / 0.35 | 0.900 / 0.90 |
+
+Each cell is `mean score / success rate`.
+
+Safe one-sentence claim:
+
+> A no-retraining, mask-aware temporal observation wrapper substantially improves official low-dimensional Push-T Diffusion Policy robustness under detector-style keypoint dropout.
+
+Do not claim:
+
+- We invented temporal imputation.
+- This solves general RGB/visual Diffusion Policy occlusion.
+- This improves clean full-observation performance.
+- Linear extrapolation is statistically significantly better than carry-forward.
+- The earlier surrogate scheduler proves official checkpoint improvement.
+
+Defense notes:
+
+- Training data has no mask channel and no keypoint dropout augmentation; the checkpoint was trained on full keypoint observations.
+- Imputation is performed in raw 0-512 keypoint coordinate space before the policy normalizer.
+- First invisible observation falls back to the training mean prior, not zero.
+- Carry-forward and linear are per-keypoint/per-coordinate updates, not full-frame hold.
+- Linear is higher than carry-forward at 25% visibility, but the paired CI crosses zero, so present it as a trend.
+
+## Reproduce the Main Occlusion Experiment
+
+The formal logs are already included under:
+
+```text
+official_reproduction/pusht_official_occluded_impute_n20/
+```
+
+To rerun one visibility rate:
 
 ```bash
 cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
-  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
-  --output-root official_reproduction/pusht_official_kh_grid_highB_n20 \
-  --n-test 20 --n-envs 5 --pairs 12,1 25,2 50,4 100,8
+for impute in none mean_prior frame_hold carry_forward linear oracle; do
+  CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
+    /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
+    --sampler ddim \
+    --obs-impute "$impute" \
+    --keypoint-visible-rate 0.5 \
+    --occlude-masked-keypoints \
+    --output-root "official_reproduction/pusht_official_occluded_impute_n20/vr_0.5/${impute}" \
+    --csv-out "results/official_occluded_impute_n20_vr_0.5_${impute}.csv" \
+    --n-test 20 --n-envs 5 --pairs 100,8
+done
+
+/root/FinalProject/.venv_official/bin/python scripts/analyze_occluded_imputation.py
 ```
 
-## Reproduce DDIM Improvement
+Use `--keypoint-visible-rate 0.25` and output paths with `vr_0.25` for the severe dropout setting.
 
-```bash
-cd /root/FinalProject
-CUDA_DEVICE_MEMORY_SHARED_CACHE=/tmp/finalproject-vgpu-cache.cache \
-  /root/FinalProject/.venv_official/bin/python scripts/run_official_kh_grid.py \
-  --sampler ddim \
-  --output-root official_reproduction/pusht_official_sampler_ddim_n20 \
-  --csv-out results/official_sampler_ddim_n20.csv \
-  --n-test 20 --n-envs 5 --pairs 25,2 50,4 100,8
+## Limitations
 
-python scripts/analyze_official_sampler_comparison.py
-```
+The current occlusion model uses the official environment's iid per-keypoint visibility mask. Real keypoint detectors often fail with temporally correlated occlusion, so continuous dropout is the most important next experiment. The result is specific to low-dimensional Push-T keypoints and should not be presented as a general RGB-policy occlusion method.
 
-## Conservative Final Claim
+## Deprecated Exploratory Directions
 
-The defensible final claim is:
+The repository also contains older DDIM/scheduler/postprocessing probes. They are retained for auditability but are not the final contribution:
 
-> This project reproduces the official Diffusion Policy Push-T checkpoint and implements a plug-and-play DDIM sampler replacement. On matched official Push-T seeds, DDIM dramatically improves low/mid-denoising settings over the official DDPM sampler, while the original high-denoising DDPM baseline remains strongest at `(100,8)`.
+- surrogate scheduler gains are not official-checkpoint evidence;
+- DDIM is an established sampler and not a novel improvement;
+- action clipping, rate limiting, and geometric fallback did not provide a reliable final result.

@@ -1,0 +1,2 @@
+method,sampler,postprocess,obs_impute,max_target_delta,geom_alpha,policy_seed,keypoint_visible_rate,occlude_masked_keypoints,k,h,budget,n_test,n_envs,max_steps,mean_score,std_score,success_rate_095,ddim_eta,min_score,max_score,policy_calls_per_episode,nfe_per_episode,log_path
+official_ddim_fixed_k100_h8,ddim,none,frame_hold,,,,0.25,True,100,8,12.5,20,5,300,0.25738966873224983,0.23319132899595976,0.0,0.0,0.0,0.8138255721840066,38.0,3800.0,official_reproduction/pusht_official_occluded_impute_n20/vr_0.25/frame_hold/k100_h8/eval_log.json

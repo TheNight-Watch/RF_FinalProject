@@ -1,0 +1,241 @@
+seed,visible_rate,obs_impute,label,deployable,score,success_095
+4300000,0.5,none,zero-fill,True,0.0,False
+4300000,0.5,mean_prior,mean prior,True,0.0,False
+4300000,0.5,frame_hold,frame hold,True,0.0,False
+4300000,0.5,carry_forward,carry-forward,True,1.0,True
+4300000,0.5,linear,linear,True,1.0,True
+4300000,0.5,oracle,oracle,False,0.9766821274069688,True
+4300001,0.5,none,zero-fill,True,0.0,False
+4300001,0.5,mean_prior,mean prior,True,0.01773221678446328,False
+4300001,0.5,frame_hold,frame hold,True,0.01773221678446328,False
+4300001,0.5,carry_forward,carry-forward,True,0.9957755485766744,True
+4300001,0.5,linear,linear,True,0.9977285617275605,True
+4300001,0.5,oracle,oracle,False,0.9644834427281899,True
+4300002,0.5,none,zero-fill,True,0.9126232258363441,False
+4300002,0.5,mean_prior,mean prior,True,0.3397410204630584,False
+4300002,0.5,frame_hold,frame hold,True,0.3397410204630584,False
+4300002,0.5,carry_forward,carry-forward,True,0.9959152435285693,True
+4300002,0.5,linear,linear,True,1.0,True
+4300002,0.5,oracle,oracle,False,0.9965631243614713,True
+4300003,0.5,none,zero-fill,True,0.2793715380936817,False
+4300003,0.5,mean_prior,mean prior,True,0.9799951430134728,True
+4300003,0.5,frame_hold,frame hold,True,0.9359340041939503,False
+4300003,0.5,carry_forward,carry-forward,True,1.0,True
+4300003,0.5,linear,linear,True,1.0,True
+4300003,0.5,oracle,oracle,False,1.0,True
+4300004,0.5,none,zero-fill,True,0.04481892962823524,False
+4300004,0.5,mean_prior,mean prior,True,0.08068450735621865,False
+4300004,0.5,frame_hold,frame hold,True,0.08068450735621865,False
+4300004,0.5,carry_forward,carry-forward,True,1.0,True
+4300004,0.5,linear,linear,True,1.0,True
+4300004,0.5,oracle,oracle,False,0.9903516144166115,True
+4300005,0.5,none,zero-fill,True,0.1540320855796819,False
+4300005,0.5,mean_prior,mean prior,True,0.39402915124395066,False
+4300005,0.5,frame_hold,frame hold,True,0.39402915124395066,False
+4300005,0.5,carry_forward,carry-forward,True,1.0,True
+4300005,0.5,linear,linear,True,0.9916668890256232,True
+4300005,0.5,oracle,oracle,False,1.0,True
+4300006,0.5,none,zero-fill,True,0.0,False
+4300006,0.5,mean_prior,mean prior,True,0.0,False
+4300006,0.5,frame_hold,frame hold,True,0.0,False
+4300006,0.5,carry_forward,carry-forward,True,1.0,True
+4300006,0.5,linear,linear,True,0.0,False
+4300006,0.5,oracle,oracle,False,0.9829059839631646,True
+4300007,0.5,none,zero-fill,True,0.045127646075307386,False
+4300007,0.5,mean_prior,mean prior,True,0.09625812245861275,False
+4300007,0.5,frame_hold,frame hold,True,0.09625812245861275,False
+4300007,0.5,carry_forward,carry-forward,True,0.5779515071628251,False
+4300007,0.5,linear,linear,True,0.4007106672809371,False
+4300007,0.5,oracle,oracle,False,0.9976660121029145,True
+4300008,0.5,none,zero-fill,True,0.0,False
+4300008,0.5,mean_prior,mean prior,True,0.20290560310886324,False
+4300008,0.5,frame_hold,frame hold,True,0.20290560310886324,False
+4300008,0.5,carry_forward,carry-forward,True,1.0,True
+4300008,0.5,linear,linear,True,0.9991817897550254,True
+4300008,0.5,oracle,oracle,False,0.9967004627702787,True
+4300009,0.5,none,zero-fill,True,0.0020810394892684255,False
+4300009,0.5,mean_prior,mean prior,True,0.9913080494149378,True
+4300009,0.5,frame_hold,frame hold,True,0.9913080494149378,True
+4300009,0.5,carry_forward,carry-forward,True,0.9207534464431333,False
+4300009,0.5,linear,linear,True,0.987319306826594,True
+4300009,0.5,oracle,oracle,False,0.9545351450751441,True
+4300010,0.5,none,zero-fill,True,0.0,False
+4300010,0.5,mean_prior,mean prior,True,0.0,False
+4300010,0.5,frame_hold,frame hold,True,0.0,False
+4300010,0.5,carry_forward,carry-forward,True,1.0,True
+4300010,0.5,linear,linear,True,1.0,True
+4300010,0.5,oracle,oracle,False,1.0,True
+4300011,0.5,none,zero-fill,True,0.4021179755885117,False
+4300011,0.5,mean_prior,mean prior,True,0.894255329328792,False
+4300011,0.5,frame_hold,frame hold,True,0.894255329328792,False
+4300011,0.5,carry_forward,carry-forward,True,0.9825346086635807,True
+4300011,0.5,linear,linear,True,0.9710313510092674,True
+4300011,0.5,oracle,oracle,False,0.9960788443043639,True
+4300012,0.5,none,zero-fill,True,0.4206028216374119,False
+4300012,0.5,mean_prior,mean prior,True,0.3675943437197816,False
+4300012,0.5,frame_hold,frame hold,True,0.3675943437197816,False
+4300012,0.5,carry_forward,carry-forward,True,0.9973294888650726,True
+4300012,0.5,linear,linear,True,1.0,True
+4300012,0.5,oracle,oracle,False,1.0,True
+4300013,0.5,none,zero-fill,True,0.3087005263470074,False
+4300013,0.5,mean_prior,mean prior,True,0.3126089214334141,False
+4300013,0.5,frame_hold,frame hold,True,0.3126089214334141,False
+4300013,0.5,carry_forward,carry-forward,True,0.9763140545863058,True
+4300013,0.5,linear,linear,True,0.9993927565996001,True
+4300013,0.5,oracle,oracle,False,0.9747545356056472,True
+4300014,0.5,none,zero-fill,True,0.12692575585064533,False
+4300014,0.5,mean_prior,mean prior,True,0.9996163820900412,True
+4300014,0.5,frame_hold,frame hold,True,0.9996163820900409,True
+4300014,0.5,carry_forward,carry-forward,True,0.9381147781717648,False
+4300014,0.5,linear,linear,True,1.0,True
+4300014,0.5,oracle,oracle,False,1.0,True
+4300015,0.5,none,zero-fill,True,0.23440040487599448,False
+4300015,0.5,mean_prior,mean prior,True,0.23179395134730246,False
+4300015,0.5,frame_hold,frame hold,True,0.23179395134730246,False
+4300015,0.5,carry_forward,carry-forward,True,0.969781080238509,True
+4300015,0.5,linear,linear,True,1.0,True
+4300015,0.5,oracle,oracle,False,0.9842120887986381,True
+4300016,0.5,none,zero-fill,True,0.0,False
+4300016,0.5,mean_prior,mean prior,True,0.9809931300672163,True
+4300016,0.5,frame_hold,frame hold,True,0.9809931300672159,True
+4300016,0.5,carry_forward,carry-forward,True,0.0,False
+4300016,0.5,linear,linear,True,0.9992085426078815,True
+4300016,0.5,oracle,oracle,False,0.0,False
+4300017,0.5,none,zero-fill,True,9.468268545153251e-05,False
+4300017,0.5,mean_prior,mean prior,True,0.03355519637147671,False
+4300017,0.5,frame_hold,frame hold,True,0.03355519637147671,False
+4300017,0.5,carry_forward,carry-forward,True,0.9820425423620734,True
+4300017,0.5,linear,linear,True,1.0,True
+4300017,0.5,oracle,oracle,False,1.0,True
+4300018,0.5,none,zero-fill,True,0.4151810652436102,False
+4300018,0.5,mean_prior,mean prior,True,0.987803032307607,True
+4300018,0.5,frame_hold,frame hold,True,0.987803032307607,True
+4300018,0.5,carry_forward,carry-forward,True,0.7386655122998118,False
+4300018,0.5,linear,linear,True,0.9579772273471663,True
+4300018,0.5,oracle,oracle,False,1.0,True
+4300019,0.5,none,zero-fill,True,0.19012144681699028,False
+4300019,0.5,mean_prior,mean prior,True,0.18709425756519626,False
+4300019,0.5,frame_hold,frame hold,True,0.18709425756519626,False
+4300019,0.5,carry_forward,carry-forward,True,0.9518332248196342,True
+4300019,0.5,linear,linear,True,0.18709425756519626,False
+4300019,0.5,oracle,oracle,False,0.18822462798337974,False
+4300000,0.25,none,zero-fill,True,0.0,False
+4300000,0.25,mean_prior,mean prior,True,0.0,False
+4300000,0.25,frame_hold,frame hold,True,0.0,False
+4300000,0.25,carry_forward,carry-forward,True,0.0,False
+4300000,0.25,linear,linear,True,0.34814068232763096,False
+4300000,0.25,oracle,oracle,False,0.9766821274069688,True
+4300001,0.25,none,zero-fill,True,0.0,False
+4300001,0.25,mean_prior,mean prior,True,0.021272391034009464,False
+4300001,0.25,frame_hold,frame hold,True,0.021272391034009464,False
+4300001,0.25,carry_forward,carry-forward,True,0.8320362938827138,False
+4300001,0.25,linear,linear,True,0.044344838296266974,False
+4300001,0.25,oracle,oracle,False,0.9644834427281898,True
+4300002,0.25,none,zero-fill,True,0.17403636649123597,False
+4300002,0.25,mean_prior,mean prior,True,0.21258341717299029,False
+4300002,0.25,frame_hold,frame hold,True,0.21258341717299029,False
+4300002,0.25,carry_forward,carry-forward,True,1.0,True
+4300002,0.25,linear,linear,True,0.9967540664769122,True
+4300002,0.25,oracle,oracle,False,0.9965631243614713,True
+4300003,0.25,none,zero-fill,True,0.2793715380936817,False
+4300003,0.25,mean_prior,mean prior,True,0.8138255721840066,False
+4300003,0.25,frame_hold,frame hold,True,0.8138255721840066,False
+4300003,0.25,carry_forward,carry-forward,True,0.5353785100983048,False
+4300003,0.25,linear,linear,True,0.9716727927219324,True
+4300003,0.25,oracle,oracle,False,1.0,True
+4300004,0.25,none,zero-fill,True,0.015834104809286244,False
+4300004,0.25,mean_prior,mean prior,True,0.22120003698485255,False
+4300004,0.25,frame_hold,frame hold,True,0.22120003698485255,False
+4300004,0.25,carry_forward,carry-forward,True,0.43353890732825534,False
+4300004,0.25,linear,linear,True,0.8998186467963101,False
+4300004,0.25,oracle,oracle,False,0.9903516144166115,True
+4300005,0.25,none,zero-fill,True,0.1540320855796819,False
+4300005,0.25,mean_prior,mean prior,True,0.3223140685059896,False
+4300005,0.25,frame_hold,frame hold,True,0.3223140685059896,False
+4300005,0.25,carry_forward,carry-forward,True,0.502333833849206,False
+4300005,0.25,linear,linear,True,0.8956604704059222,False
+4300005,0.25,oracle,oracle,False,1.0,True
+4300006,0.25,none,zero-fill,True,0.0,False
+4300006,0.25,mean_prior,mean prior,True,0.0,False
+4300006,0.25,frame_hold,frame hold,True,0.0,False
+4300006,0.25,carry_forward,carry-forward,True,0.0,False
+4300006,0.25,linear,linear,True,0.0,False
+4300006,0.25,oracle,oracle,False,0.9829059839631646,True
+4300007,0.25,none,zero-fill,True,0.045127646075307386,False
+4300007,0.25,mean_prior,mean prior,True,0.045127646075307386,False
+4300007,0.25,frame_hold,frame hold,True,0.045127646075307386,False
+4300007,0.25,carry_forward,carry-forward,True,0.5333902148798064,False
+4300007,0.25,linear,linear,True,0.42888521274844976,False
+4300007,0.25,oracle,oracle,False,0.9976660121029144,True
+4300008,0.25,none,zero-fill,True,0.0,False
+4300008,0.25,mean_prior,mean prior,True,0.007078757830265698,False
+4300008,0.25,frame_hold,frame hold,True,0.007078757830265698,False
+4300008,0.25,carry_forward,carry-forward,True,0.958826785182027,True
+4300008,0.25,linear,linear,True,0.0,False
+4300008,0.25,oracle,oracle,False,0.9967004627702787,True
+4300009,0.25,none,zero-fill,True,0.00022323700018118755,False
+4300009,0.25,mean_prior,mean prior,True,0.6588690798145046,False
+4300009,0.25,frame_hold,frame hold,True,0.6588690798145046,False
+4300009,0.25,carry_forward,carry-forward,True,0.7792167069893423,False
+4300009,0.25,linear,linear,True,0.8624056803741065,False
+4300009,0.25,oracle,oracle,False,0.9545351450751441,True
+4300010,0.25,none,zero-fill,True,0.0,False
+4300010,0.25,mean_prior,mean prior,True,0.0,False
+4300010,0.25,frame_hold,frame hold,True,0.0,False
+4300010,0.25,carry_forward,carry-forward,True,0.0,False
+4300010,0.25,linear,linear,True,0.9957061515339612,True
+4300010,0.25,oracle,oracle,False,1.0,True
+4300011,0.25,none,zero-fill,True,0.5358019064850138,False
+4300011,0.25,mean_prior,mean prior,True,0.27954753320248316,False
+4300011,0.25,frame_hold,frame hold,True,0.27954753320248316,False
+4300011,0.25,carry_forward,carry-forward,True,0.47677319314518996,False
+4300011,0.25,linear,linear,True,0.9722075429097737,True
+4300011,0.25,oracle,oracle,False,0.9960788443043639,True
+4300012,0.25,none,zero-fill,True,0.16202009453831215,False
+4300012,0.25,mean_prior,mean prior,True,0.3466108452081189,False
+4300012,0.25,frame_hold,frame hold,True,0.346610845208119,False
+4300012,0.25,carry_forward,carry-forward,True,0.43760145160869235,False
+4300012,0.25,linear,linear,True,0.2219899077848771,False
+4300012,0.25,oracle,oracle,False,1.0,True
+4300013,0.25,none,zero-fill,True,0.3087005263470074,False
+4300013,0.25,mean_prior,mean prior,True,0.3745656435889815,False
+4300013,0.25,frame_hold,frame hold,True,0.3745656435889815,False
+4300013,0.25,carry_forward,carry-forward,True,0.9140648620086582,False
+4300013,0.25,linear,linear,True,0.9838062608133558,True
+4300013,0.25,oracle,oracle,False,0.9747545356056472,True
+4300014,0.25,none,zero-fill,True,0.1924634683451791,False
+4300014,0.25,mean_prior,mean prior,True,0.24423520419878972,False
+4300014,0.25,frame_hold,frame hold,True,0.24423520419878972,False
+4300014,0.25,carry_forward,carry-forward,True,1.0,True
+4300014,0.25,linear,linear,True,0.9276843263737097,False
+4300014,0.25,oracle,oracle,False,1.0,True
+4300015,0.25,none,zero-fill,True,0.21993068956021253,False
+4300015,0.25,mean_prior,mean prior,True,0.2584894686996958,False
+4300015,0.25,frame_hold,frame hold,True,0.2584894686996958,False
+4300015,0.25,carry_forward,carry-forward,True,0.9574015343831028,True
+4300015,0.25,linear,linear,True,0.9725557976248821,True
+4300015,0.25,oracle,oracle,False,0.9842120887986381,True
+4300016,0.25,none,zero-fill,True,0.006964729583132399,False
+4300016,0.25,mean_prior,mean prior,True,0.25897425523184503,False
+4300016,0.25,frame_hold,frame hold,True,0.25897425523184503,False
+4300016,0.25,carry_forward,carry-forward,True,0.006964729583132399,False
+4300016,0.25,linear,linear,True,0.934488936682971,False
+4300016,0.25,oracle,oracle,False,0.0,False
+4300017,0.25,none,zero-fill,True,0.024564773481849718,False
+4300017,0.25,mean_prior,mean prior,True,0.2350663133769081,False
+4300017,0.25,frame_hold,frame hold,True,0.2350663133769081,False
+4300017,0.25,carry_forward,carry-forward,True,0.7989550820257879,False
+4300017,0.25,linear,linear,True,0.9948348446552883,True
+4300017,0.25,oracle,oracle,False,1.0,True
+4300018,0.25,none,zero-fill,True,0.379817153057252,False
+4300018,0.25,mean_prior,mean prior,True,0.6630254316029178,False
+4300018,0.25,frame_hold,frame hold,True,0.6630254316029179,False
+4300018,0.25,carry_forward,carry-forward,True,0.5032110971443892,False
+4300018,0.25,linear,linear,True,0.7203403009892346,False
+4300018,0.25,oracle,oracle,False,1.0,True
+4300019,0.25,none,zero-fill,True,0.1910511775436645,False
+4300019,0.25,mean_prior,mean prior,True,0.18500770993332996,False
+4300019,0.25,frame_hold,frame hold,True,0.18500770993332996,False
+4300019,0.25,carry_forward,carry-forward,True,0.824493698272239,False
+4300019,0.25,linear,linear,True,0.18500770993332996,False
+4300019,0.25,oracle,oracle,False,0.18822462798337974,False
