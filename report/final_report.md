@@ -42,9 +42,22 @@ Compared strategies:
 | linear | independently extrapolate from the two most recent visible values per coordinate |
 | oracle | retain true coordinates despite the mask; upper bound only |
 
+## Reproduction Sanity Check
+
+Before testing the improvement, we reproduced the public low-dimensional Push-T checkpoint with the official runner:
+
+| Evaluation | Mean score | Notes |
+|---|---:|---|
+| Local 50-seed DDPM reproduction | 0.919 | compatibility environment |
+| Checkpoint filename reference | 0.969 | reported by released checkpoint |
+
+The gap is reported as an environment-version reproduction gap because this project runs the official code in a Python 3.12 / PyTorch 2.7 / Gym 0.26 compatibility environment rather than the original stack.
+
 ## Results
 
 Official low-dimensional Push-T checkpoint, DDIM `(k,h)=(100,8)`, 20 matched seeds:
+
+DDIM is used only as a deterministic, stable evaluation sampler. It is not the final contribution. The mask-handling failure occurs before the diffusion sampler because the deployment path discards `obs_mask` before policy inference; the empirical table below is reported with DDIM.
 
 | visible rate | method | score | success >=0.95 | delta vs zero | 95% CI |
 |---:|---|---:|---:|---:|---:|

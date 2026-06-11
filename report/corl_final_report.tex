@@ -59,7 +59,22 @@ The per-coordinate history is reset at episode start. If a coordinate is invisib
 
 \section{Experimental Setup}
 
-Experiments use the official low-dimensional Push-T checkpoint, the official keypoint runner, DDIM inference with $(k,h)=(100,8)$, 20 matched test seeds, and two synthetic visibility rates: 50\% and 25\%. The visibility masks are produced by the seeded environment and the same seed set is used for every imputation method. We report mean Push-T score, success rate at score $\geq 0.95$, and paired bootstrap confidence intervals over matched seeds.
+Before testing the improvement, we reproduced the public checkpoint with the official low-dimensional Push-T runner. A 50-seed DDPM evaluation obtained mean score 0.919, while the checkpoint filename reports 0.969. We report this as a reproduction gap caused by running the official code in a compatibility environment rather than the original Python 3.9 / PyTorch 1.12 / Gym 0.21 stack.
+
+\begin{table}[t]
+\centering
+\caption{Official checkpoint reproduction sanity check.}
+\begin{tabular}{lrr}
+\toprule
+Evaluation & Mean score & Notes \\
+\midrule
+Local 50-seed DDPM reproduction & 0.919 & compatibility environment \\
+Checkpoint filename reference & 0.969 & reported by released checkpoint \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Occlusion experiments use the same official low-dimensional Push-T checkpoint and keypoint runner. We use DDIM inference with $(k,h)=(100,8)$ for deterministic, stable evaluation; this is not the contribution. The mask-handling failure occurs before the diffusion sampler because the deployment path discards \texttt{obs\_mask} before policy inference, so the source-level issue is sampler-independent even though the empirical table below is reported with DDIM. We use 20 matched test seeds and two synthetic visibility rates: 50\% and 25\%. The visibility masks are produced by the seeded environment and the same seed set is used for every imputation method. We report mean Push-T score, success rate at score $\geq 0.95$, and paired bootstrap confidence intervals over matched seeds.
 
 The current evaluation uses the official iid per-keypoint visibility mask. This is a favorable setting for temporal imputation because a missing keypoint is often visible again soon. Continuous occlusion is left as a limitation and future experiment.
 

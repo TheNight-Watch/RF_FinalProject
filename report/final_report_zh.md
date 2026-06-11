@@ -103,6 +103,15 @@ keypoint_visible_rate: 1.0
 
 ## 4. 实验设置
 
+在测试 improvement 之前，我们先用官方 runner 对公开 checkpoint 做了复现 sanity check：
+
+| Evaluation | Mean score | Notes |
+|---|---:|---|
+| Local 50-seed DDPM reproduction | 0.919 | compatibility environment |
+| Checkpoint filename reference | 0.969 | released checkpoint filename |
+
+这里的差距记录为环境版本 gap：本项目在 Python 3.12 / PyTorch 2.7 / Gym 0.26 兼容环境中运行官方代码，而不是原始训练/评测栈。这个数字应该放进正文，因为 reproduction 是课程要求的一半。
+
 正式实验设置：
 
 - checkpoint：官方 low-dimensional Push-T Diffusion Policy checkpoint；
@@ -112,6 +121,8 @@ keypoint_visible_rate: 1.0
 - mask：官方环境产生的 iid per-keypoint visibility mask；
 - metric：Push-T mean score 和 success rate，其中 success 定义为 score `>= 0.95`；
 - 统计：paired bootstrap confidence interval。
+
+这里使用 DDIM 只是为了得到 deterministic、稳定的评估设置，不是最终 contribution。最终 contribution 是 mask-aware observation wrapper。这个 failure mode 在 sampler 之前发生：deployment path 在 policy inference 前丢弃 `obs_mask`，所以源码层面的问题与 DDPM/DDIM sampler 无关；本文的正式数值表是在 DDIM 下报告的。
 
 所有方法使用同一批 seeds。由于 env 用相同 seed 初始化，mask 随机序列是可复现的。不同 imputation 会改变动作轨迹，因此后续状态不同，但这正是 policy deployment 比较应包含的闭环差异。
 

@@ -25,7 +25,18 @@ Therefore, detector-style missing keypoints that are zero-filled at deployment b
 
 ## Main Results
 
-Official low-dimensional Push-T checkpoint, DDIM `(k,h)=(100,8)`, 20 matched seeds:
+Reproduction sanity check:
+
+| Evaluation | Mean score | Notes |
+|---|---:|---|
+| Local 50-seed DDPM reproduction | 0.919 | compatibility environment |
+| Checkpoint filename reference | 0.969 | reported by released checkpoint |
+
+The gap is reported as an environment-version reproduction gap because this project runs the official code in a compatibility stack rather than the original Python 3.9 / PyTorch 1.12 / Gym 0.21 setup.
+
+Main robustness experiment: official low-dimensional Push-T checkpoint, DDIM `(k,h)=(100,8)`, 20 matched seeds.
+
+DDIM is used only as a deterministic, stable evaluation sampler. It is not the final contribution. The mask-handling failure happens before diffusion sampling because the deployment path discards `obs_mask` before policy inference; the empirical table below is reported under DDIM.
 
 | visible rate | method | score | success >=0.95 | delta vs zero | 95% CI |
 |---:|---|---:|---:|---:|---:|
@@ -85,6 +96,15 @@ Suggested PPT storyline:
 
 Key numbers for slides:
 
+Reproduction:
+
+| Evaluation | Mean score |
+|---|---:|
+| Local 50-seed DDPM reproduction | 0.919 |
+| Checkpoint filename reference | 0.969 |
+
+Improvement:
+
 | visible rate | zero-fill | mean prior | frame hold | carry-forward | linear | oracle |
 |---:|---:|---:|---:|---:|---:|---:|
 | 50% | 0.177 / 0.00 | 0.405 / 0.25 | 0.403 / 0.20 | 0.901 / 0.75 | 0.875 / 0.85 | 0.900 / 0.90 |
@@ -107,6 +127,8 @@ Do not claim:
 Defense notes:
 
 - Training data has no mask channel and no keypoint dropout augmentation; the checkpoint was trained on full keypoint observations.
+- DDIM `(100,8)` is used for deterministic evaluation, not claimed as the contribution.
+- The mask-handling failure is before the sampler: `obs_mask` is discarded before policy inference.
 - Imputation is performed in raw 0-512 keypoint coordinate space before the policy normalizer.
 - First invisible observation falls back to the training mean prior, not zero.
 - Carry-forward and linear are per-keypoint/per-coordinate updates, not full-frame hold.
